@@ -60,12 +60,9 @@ def show_output(output_list):
     plt.show()
 
 
-def lbp(path, plot=True):
-    img_bgr = cv2.imread(path)
-    height, width, channel = img_bgr.shape
-    img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-
-    img_lbp = np.zeros((height, width, 3), np.uint8)
+def lbp(img_gray, plot=False):
+    height, width = img_gray.shape
+    img_lbp = np.zeros((height, width), np.uint8)
     for i in range(0, height):
         for j in range(0, width):
             img_lbp[i, j] = lbp_calculated_pixel(img_gray, i, j)
@@ -101,4 +98,4 @@ def lbp(path, plot=True):
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    return img_lbp[:, :, 0]
+    return img_lbp
