@@ -5,30 +5,53 @@ from matplotlib import pyplot as plt
 
 
 def get_pixel(img, center, x, y):
-    new_value = 0
     try:
-        if img[x][y] >= center:
-            new_value = 1
+        if img[x, y] >= center:
+            return 1
+        else:
+            return 0
     except IndexError:
-        pass
-    return new_value
+        return 0
 
 
 def lbp_calculated_pixel(img, x, y):
     center = img[x][y]
-    val_ar = [get_pixel(img, center, x - 1, y + 1), get_pixel(img, center, x, y + 1),
-              get_pixel(img, center, x + 1, y + 1), get_pixel(img, center, x + 1, y),
-              get_pixel(img, center, x + 1, y - 1), get_pixel(img, center, x, y - 1),
-              get_pixel(img, center, x - 1, y - 1), get_pixel(img, center, x - 1, y)]
-
-    power_val = [1, 2, 4, 8, 16, 32, 64, 128]
-    val = 0
-    for i in range(len(val_ar)):
-        val += val_ar[i] * power_val[i]
-    return val
+    val = np.array(
+        [get_pixel(img, center, x - 1, y + 1), get_pixel(img, center, x, y + 1),
+         get_pixel(img, center, x + 1, y + 1), get_pixel(img, center, x + 1, y),
+         get_pixel(img, center, x + 1, y - 1), get_pixel(img, center, x, y - 1),
+         get_pixel(img, center, x - 1, y - 1), get_pixel(img, center, x - 1, y)]
+    )
+    return sum(val*(2**np.arange(len(val))))
 
 
-def show_output(output_list):
+def show_output(img_gray, img_lbp):
+    hist_lbp = cv2.calcHist([img_lbp], [0], None, [256], [0, 256])
+    output_list = [{
+        "img": img_gray,
+        "xlabel": "",
+        "ylabel": "",
+        "xtick": [],
+        "ytick": [],
+        "title": "Gray Image",
+        "type": "gray"
+    }, {
+        "img": img_lbp,
+        "xlabel": "",
+        "ylabel": "",
+        "xtick": [],
+        "ytick": [],
+        "title": "LBP Image",
+        "type": "gray"
+    }, {
+        "img": hist_lbp,
+        "xlabel": "Bins",
+        "ylabel": "Number of pixels",
+        "xtick": None,
+        "ytick": None,
+        "title": "Histogram(LBP)",
+        "type": "histogram"
+    }]
     output_list_len = len(output_list)
     figure = plt.figure()
     for i in range(output_list_len):
@@ -58,6 +81,8 @@ def show_output(output_list):
             current_plot.set_yticklabels(ytick_list, rotation=90)
 
     plt.show()
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 def lbp(img_gray, plot=False):
@@ -66,36 +91,6 @@ def lbp(img_gray, plot=False):
     for i in range(0, height):
         for j in range(0, width):
             img_lbp[i, j] = lbp_calculated_pixel(img_gray, i, j)
-    hist_lbp = cv2.calcHist([img_lbp], [0], None, [256], [0, 256])
-    output_list = [{
-        "img": img_gray,
-        "xlabel": "",
-        "ylabel": "",
-        "xtick": [],
-        "ytick": [],
-        "title": "Gray Image",
-        "type": "gray"
-    }, {
-        "img": img_lbp,
-        "xlabel": "",
-        "ylabel": "",
-        "xtick": [],
-        "ytick": [],
-        "title": "LBP Image",
-        "type": "gray"
-    }, {
-        "img": hist_lbp,
-        "xlabel": "Bins",
-        "ylabel": "Number of pixels",
-        "xtick": None,
-        "ytick": None,
-        "title": "Histogram(LBP)",
-        "type": "histogram"
-    }]
-
     if plot:
-        show_output(output_list)
-
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        show_output(img_gray, img_lbp)
     return img_lbp

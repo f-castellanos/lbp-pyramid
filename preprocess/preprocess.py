@@ -2,7 +2,7 @@ import cv2
 from .lbp import lbp
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import PIL
 
 
 class Preprocess:
@@ -13,23 +13,17 @@ class Preprocess:
         self.original_width = 565
 
     @staticmethod
-    def read_img(path, flag=None):
-        img = plt.imread(path)
-        if flag == 0 and len(img.shape) == 3:
-            img = Preprocess.to_gray(img)
-        return img
+    def read_img(path):
+        img = np.asarray(PIL.Image.open(path).convert('L'))
+        return img.copy()
 
     @staticmethod
     def apply_mask(img, mask):
-        mask[mask < 15] = 0
-        mask[mask > 15] = 1
-        img = cv2.bitwise_or(np.uint8(np.zeros(img.shape)), img, mask=mask)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        img[mask < 15] = 0
         return img
 
     @staticmethod
-    def resize(img, dim):
+    def rescale(img, dim):
         """
         Resizes the image to the given dimensions.
         INTER_CUBIC – a bicubic interpolation over 4×4 pixel neighborhood
@@ -37,10 +31,11 @@ class Preprocess:
         :param dim: (width, height)
         :return: image resized
         """
-        img = cv2.resize(img, dim, interpolation=cv2.INTER_CUBIC)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        return img
+        im = PIL.Image.fromarray(np.uint8(img))
+        if img.shape != dim:
+            return np.asarray(im.resize(dim, resample=PIL.Image.BILINEAR))
+        else:
+            return img
 
     def crop(self, img, dim=(512, 512)):
         crop_height = (self.height - dim[0]) / 2
@@ -59,7 +54,7 @@ class Preprocess:
             crop_right = self.width - (int(crop_width) + 1)
         return img[crop_bottom:crop_top, crop_left:crop_right, :]
 
-    def resize_add_borders(self, img):
+    def rescale_add_borders(self, img):
         height, width = img.shape
         v_add = np.zeros((self.height - height, width))
         h_add = np.zeros((self.height, self.width - width))
@@ -74,30 +69,32 @@ class Preprocess:
         )
 
     @staticmethod
-    def to_gray(img_bgr):
-        img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        return img
+    def gray_to_array(img):
+        return img.ravel()
 
     @staticmethod
-    def gray_to_frame(img):
-        return pd.Series(img.reshape(1, -1)[0]).to_frame()
-
-    # @staticmethod
-    def apply_lbp(self, path, mask_path=None, plot=True):
-        img = Preprocess.read_img(path, flag=0)
-        if mask_path is not None:
-            mask = Preprocess.read_img(path, flag=0)
-            img = Preprocess.apply_mask(img, mask)
-        img = self.resize_add_borders(img)
+    def apply_lbp(img, plot=False):
         img = lbp(img, plot=plot)
-        return Preprocess.gray_to_frame(img)
+        return Preprocess.gray_to_array(img)
+
+    def get_features(self, path, mask_path=None, plot=False):
+        img = Preprocess.read_img(path)
+        if mask_path is not None:
+            mask = Preprocess.read_img(path)
+            img = Preprocess.apply_mask(img, mask)
+        img = self.rescale_add_borders(img)
+        lbp_matrix = np.zeros((self.height * self.width, 6))
+        for i in 2**np.arange(6):
+            img_resized = Preprocess.rescale(img.copy(), (self.width//i, self.height//i))
+            lbp_array = Preprocess.apply_lbp(img_resized, plot=plot)
+            lbp_matrix[:, int(np.log2(i))] = np.repeat(lbp_array, i**2)
+        df = pd.DataFrame(lbp_matrix, columns=['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'], dtype='uint8')
+        return df
 
     def get_label(self, path):
-        img = Preprocess.read_img(path, flag=0)
-        img = self.resize_add_borders(img)
-        df = Preprocess.gray_to_frame(img).astype(int)
+        img = Preprocess.read_img(path)
+        img = self.rescale_add_borders(img)
+        df = pd.DataFrame(Preprocess.gray_to_array(img), columns=['label']).astype(int)
         df[df < 30] = 0
         df[df > 30] = 1
         return df
