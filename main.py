@@ -3,23 +3,30 @@ from plot_results.plot_results import PlotResults
 import os
 from pathlib import Path
 import pandas as pd
+from sklearn.naive_bayes import GaussianNB
+import numpy as np
+from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 
 
+# Database load
 parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
-preprocess = Preprocess(height=608, width=576)
-plot_results = PlotResults(height=608, width=576)
-images_path = parent_path + '/dataset/training/images/'
-images = sorted(os.listdir(images_path))
-masks_path = parent_path + '/dataset/training/mask/'
-masks = sorted(os.listdir(masks_path))
-labels_path = parent_path + '/dataset/training/1st_manual/'
-df = pd.DataFrame()
-labels = sorted(os.listdir(labels_path))
-for image, mask, label in zip(images, masks, labels):
-    img_path = images_path + image
-    mask_path = masks_path + mask
-    label_path = labels_path + label
-    df_img = preprocess.get_features(img_path, mask_path=mask_path, plot=False)
-    df_img['label'] = preprocess.get_label(label_path)
-    df = pd.concat((df, df_img))
-# df.to_pickle(parent_path + '/DDBB/train.pkl')
+df_train = pd.read_pickle(parent_path + '/DDBB/train_train.pkl')
+df_test = pd.read_pickle(parent_path + '/DDBB/train_test.pkl')
+y_train = df_train.loc[:, 'label']
+y_test = df_test.loc[:, 'label']
+df_train.drop(columns=['label'], inplace=True)
+df_test.drop(columns=['label'], inplace=True)
+
+# Binning
+bins = list(range(-1, 256, 32))
+for column in df_train.columns:
+    df_train.loc[:, column] = pd.cut(df_train.loc[:, column], bins, labels=np.array(bins[1:]).astype(str))
+    df_test.loc[:, column] = pd.cut(df_test.loc[:, column], bins, labels=np.array(bins[1:]).astype(str))
+
+clf = GaussianNB()
+clf.fit(df_train, y_train)
+y_pred = clf.predict(df_test)
+
+print(accuracy_score(y_test, y_pred))
+print(f1_score(y_test, y_pred))
+print(confusion_matrix(y_test, y_pred))

@@ -14,11 +14,23 @@ class Preprocess:
 
     @staticmethod
     def read_img(path):
+        """
+        Reads a image given the path
+        :param path: Image path
+        :return: Numpy array containing the information of the image
+        """
         img = np.asarray(PIL.Image.open(path).convert('L'))
         return img.copy()
 
     @staticmethod
     def apply_mask(img, mask):
+        """
+        Applies the given mask to the given image. The pixels corresponding to small mask values are discarded.
+        :param img: Numpy array containing the information of the image.
+        :param mask: Numpy array containing the information of the mask.
+        :return: Numpy array containing the information of the image after the mask has been applied.
+        """
+        # img[mask < 15] = np.median(img[mask > 15])
         img[mask < 15] = 0
         return img
 
@@ -26,14 +38,16 @@ class Preprocess:
     def rescale(img, dim):
         """
         Resizes the image to the given dimensions.
-        INTER_CUBIC – a bicubic interpolation over 4×4 pixel neighborhood
+        PIL.Image.LANCZOS – Calculate the output pixel value using a high-quality Lanczos filter (a truncated sinc) on
+        all pixels that may contribute to the output value.
+        https://pillow.readthedocs.io/en/stable/handbook/concepts.html
         :param img: original image
         :param dim: (width, height)
         :return: image resized
         """
         im = PIL.Image.fromarray(np.uint8(img))
         if img.shape != dim:
-            return np.asarray(im.resize(dim, resample=PIL.Image.BILINEAR))
+            return np.asarray(im.resize(dim, resample=PIL.Image.LANCZOS))
         else:
             return img
 
@@ -55,6 +69,11 @@ class Preprocess:
         return img[crop_bottom:crop_top, crop_left:crop_right, :]
 
     def rescale_add_borders(self, img):
+        """
+        Adds dummy pixels to the given image to rescale the image to the desired size.
+        :param img: Numpy array containing the information of the image.
+        :return: Numpy array containing the information of the resized image.
+        """
         height, width = img.shape
         v_add = np.zeros((self.height - height, width))
         h_add = np.zeros((self.height, self.width - width))
@@ -74,10 +93,23 @@ class Preprocess:
 
     @staticmethod
     def apply_lbp(img, plot=False):
+        """
+        Returns the LBP values for the given image
+        :param img: Numpy array containing the information of the image.
+        :param plot: Boolean to determine whether to plot the results
+        :return: Numpy array containing the information of the LBP image.
+        """
         img = lbp(img, plot=plot)
-        return Preprocess.gray_to_array(img)
+        return img
 
     def get_features(self, path, mask_path=None, plot=False):
+        """
+        Returns the pyramid LBP values for each pixel of the given image
+        :param path: Image path
+        :param mask_path: Path of the mask
+        :param plot: Boolean to determine whether to plot the results
+        :return: DataFrame of the features calculated from the image
+        """
         img = Preprocess.read_img(path)
         if mask_path is not None:
             mask = Preprocess.read_img(path)
@@ -86,8 +118,10 @@ class Preprocess:
         lbp_matrix = np.zeros((self.height * self.width, 6))
         for i in 2**np.arange(6):
             img_resized = Preprocess.rescale(img.copy(), (self.width//i, self.height//i))
-            lbp_array = Preprocess.apply_lbp(img_resized, plot=plot)
-            lbp_matrix[:, int(np.log2(i))] = np.repeat(lbp_array, i**2)
+            img_lbp = Preprocess.apply_lbp(img_resized, plot=plot)
+            img_lbp = img_lbp[np.repeat(np.arange(img_lbp.shape[0]), i), :]
+            img_lbp = img_lbp[:, np.repeat(np.arange(img_lbp.shape[1]), i)]
+            lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()
         df = pd.DataFrame(lbp_matrix, columns=['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'], dtype='uint8')
         return df
 
