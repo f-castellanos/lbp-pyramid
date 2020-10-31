@@ -25,7 +25,7 @@ for i, (image, mask, label) in enumerate(zip(images, masks, labels)):
     mask_path = masks_path + mask
     label_path = labels_path + label
     # Image processing
-    df_img = preprocess.get_features(img_path, mask_path=mask_path, plot=False)
+    df_img = preprocess.get_features(img_path, mask_path=mask_path, plot=True)
     df_img['label'] = preprocess.get_label(label_path)
     # Image concatenation
     df = pd.concat((df, df_img))

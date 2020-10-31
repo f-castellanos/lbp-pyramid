@@ -4,25 +4,22 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def get_pixel(img, center, x, y):
-    try:
-        if img[x, y] >= center:
-            return 1
-        else:
-            return 0
-    except IndexError:
-        return 0
-
-
-def lbp_calculated_pixel(img, x, y):
-    center = img[x][y]
-    val = np.array(
-        [get_pixel(img, center, x - 1, y + 1), get_pixel(img, center, x, y + 1),
-         get_pixel(img, center, x + 1, y + 1), get_pixel(img, center, x + 1, y),
-         get_pixel(img, center, x + 1, y - 1), get_pixel(img, center, x, y - 1),
-         get_pixel(img, center, x - 1, y - 1), get_pixel(img, center, x - 1, y)]
-    )
-    return sum(val*(2**np.arange(len(val))))
+def lbp_pixel_calc(img, x, y, r=1):
+    center = img[x, y]
+    matrix = img[x - r:x + r + 1, y - r:y + r + 1]
+    if matrix.shape[0]*matrix.shape[1] != (r*2+1)**2:
+        '''
+        When there are no neighboring pixels for the given radius,
+        a zero value is given to some virtual pixels outside the edges.
+        '''
+        img_resized = np.zeros(np.array(img.shape) + 2*r)
+        img_resized[r:-r, r:-r] = img
+        x += r
+        y += r
+        matrix = img[x - r:x + r + 1, y - r:y + r + 1]
+    arr = np.concatenate((matrix[0, 1:-1][::-1], matrix[:, 0], matrix[-1, 1:-1], matrix[0:, -1][::-1]))
+    arr = np.where(arr < center, 1, 0)
+    return sum(arr*(2**np.arange(len(arr))[::-1]))
 
 
 def show_output(img_gray, img_lbp):
@@ -90,7 +87,7 @@ def lbp(img_gray, plot=False):
     img_lbp = np.zeros((height, width), np.uint8)
     for i in range(0, height):
         for j in range(0, width):
-            img_lbp[i, j] = lbp_calculated_pixel(img_gray, i, j)
+            img_lbp[i, j] = lbp_pixel_calc(img_gray, i, j)
     if plot:
         show_output(img_gray, img_lbp)
     return img_lbp
