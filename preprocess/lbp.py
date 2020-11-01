@@ -1,24 +1,22 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import itertools
+import pickle
+import os
 
 
-def plot_lbp(img, img_lbp, r, method):
-    if method == 'riu2':
-        max_val = r*8+1
-    else:
-        max_val = 2**(r*8)
+def plot_lbp(img, img_lbp):
     plt.figure()
     plt.subplot(1, 3, 1)
     plt.imshow(img, cmap='gray')
     plt.title('Original Image')
     plt.axis('off')
     plt.subplot(1, 3, 2)
-    plt.imshow(img_lbp, cmap='gray', vmax=max_val)
+    plt.imshow(img_lbp, cmap='gray', vmax=np.max(img_lbp))
     plt.title('LBP Image')
     plt.axis('off')
     plt.subplot(1, 3, 3)
-    plt.hist(img_lbp.ravel(), bins=list(range(max_val + 1)), ec='white')
+    plt.hist(img_lbp.ravel(), bins=list(range(np.max(img_lbp) + 1)), ec='white')
     plt.title('Histogram')
     plt.show()
 
@@ -56,11 +54,26 @@ def lbp_pixel_calc(img, x, y, r, method):
         return sum(arr * (2 ** np.arange(len(arr))[::-1]))
 
 
-def lbp(img, r=1, method='riu2', plot=False):
+def lbp(img, r=1, method='riu', plot=False):
     height, width = img.shape
     img_lbp = np.zeros((height, width), np.uint8)
     for i in range(0, height):
         img_lbp[i, :] = [lbp_pixel_calc(img, i, j, r, method) for j in range(0, width)]
+    if method == 'riu':
+        if r == 1:
+            __location__ = os.path.realpath(
+                os.path.join(os.getcwd(), os.path.dirname(__file__)))
+            path = os.path.join(__location__, 'riu_r1_map.pkl')
+            with open(path, 'rb') as f:
+                d = pickle.load(f)
+        else:
+            '''
+            Inconsistent when comparing between different images
+            '''
+            d = dict(enumerate(np.unique(img_lbp)))
+        img_lbp_copy = np.copy(img_lbp)
+        for key, value in d.items():
+            img_lbp[img_lbp_copy == value] = key
     if plot:
-        plot_lbp(img, img_lbp, r, method)
+        plot_lbp(img, img_lbp)
     return img_lbp
