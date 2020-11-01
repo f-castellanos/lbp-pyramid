@@ -1,8 +1,26 @@
-# Original code: https://github.com/arsho/local_binary_patterns
-import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import itertools
+
+
+def plot_lbp(img, img_lbp, r, method):
+    if method == 'riu2':
+        max_val = r*8+1
+    else:
+        max_val = 2**(r*8)
+    plt.figure()
+    plt.subplot(1, 3, 1)
+    plt.imshow(img, cmap='gray')
+    plt.title('Original Image')
+    plt.axis('off')
+    plt.subplot(1, 3, 2)
+    plt.imshow(img_lbp, cmap='gray', vmax=max_val)
+    plt.title('LBP Image')
+    plt.axis('off')
+    plt.subplot(1, 3, 3)
+    plt.hist(img_lbp.ravel(), bins=list(range(max_val + 1)), ec='white')
+    plt.title('Histogram')
+    plt.show()
 
 
 def roll_pattern(pattern, k):
@@ -31,79 +49,18 @@ def lbp_pixel_calc(img, x, y, r, method):
     elif method == 'riu2':
         u = len(list(itertools.groupby(np.append(arr, arr[0]), lambda bit: bit == 0))) - 1
         if u > 2:
-            return len(arr) + 1
+            return r*8 + 1
         else:
             return sum(arr)
     else:
         return sum(arr * (2 ** np.arange(len(arr))[::-1]))
 
 
-def show_output(img_gray, img_lbp):
-    hist_lbp = cv2.calcHist([img_lbp], [0], None, [10], [0, 10])
-    output_list = [{
-        "img": img_gray,
-        "xlabel": "",
-        "ylabel": "",
-        "xtick": [],
-        "ytick": [],
-        "title": "Gray Image",
-        "type": "gray"
-    }, {
-        "img": img_lbp,
-        "xlabel": "",
-        "ylabel": "",
-        "xtick": [],
-        "ytick": [],
-        "title": "LBP Image",
-        "type": "gray"
-    }, {
-        "img": hist_lbp,
-        "xlabel": "Bins",
-        "ylabel": "Number of pixels",
-        "xtick": None,
-        "ytick": None,
-        "title": "Histogram(LBP)",
-        "type": "histogram"
-    }]
-    output_list_len = len(output_list)
-    figure = plt.figure()
-    for i in range(output_list_len):
-        current_dict = output_list[i]
-        current_img = current_dict["img"]
-        current_xlabel = current_dict["xlabel"]
-        current_ylabel = current_dict["ylabel"]
-        current_xtick = current_dict["xtick"]
-        current_ytick = current_dict["ytick"]
-        current_title = current_dict["title"]
-        current_type = current_dict["type"]
-        current_plot = figure.add_subplot(1, output_list_len, i + 1)
-        if current_type == "gray":
-            current_plot.imshow(current_img, cmap=plt.get_cmap('gray'))
-            current_plot.set_title(current_title)
-            current_plot.set_xticks(current_xtick)
-            current_plot.set_yticks(current_ytick)
-            current_plot.set_xlabel(current_xlabel)
-            current_plot.set_ylabel(current_ylabel)
-        elif current_type == "histogram":
-            current_plot.plot(current_img, color="black")
-            current_plot.set_xlim([0, 10])
-            current_plot.set_title(current_title)
-            current_plot.set_xlabel(current_xlabel)
-            current_plot.set_ylabel(current_ylabel)
-            ytick_list = [int(i) for i in current_plot.get_yticks()]
-            current_plot.set_yticklabels(ytick_list, rotation=90)
-
-    plt.show()
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
-
-def lbp(img_gray, r=1, method='riu2', plot=False):
-    height, width = img_gray.shape
+def lbp(img, r=1, method='riu2', plot=False):
+    height, width = img.shape
     img_lbp = np.zeros((height, width), np.uint8)
     for i in range(0, height):
-        for j in range(0, width):
-            img_lbp[i, j] = lbp_pixel_calc(img_gray, i, j, r, method)
+        img_lbp[i, :] = [lbp_pixel_calc(img, i, j, r, method) for j in range(0, width)]
     if plot:
-        show_output(img_gray, img_lbp)
+        plot_lbp(img, img_lbp, r, method)
     return img_lbp
