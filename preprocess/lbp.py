@@ -16,7 +16,9 @@ def plot_lbp(img, img_lbp):
     plt.title('LBP Image')
     plt.axis('off')
     plt.subplot(1, 3, 3)
-    plt.hist(img_lbp.ravel(), bins=list(range(np.max(img_lbp) + 1)), ec='white')
+    bins = np.arange(np.max(img_lbp)+2)-0.5
+    plt.hist(img_lbp.ravel(), bins=np.arange(np.max(img_lbp)+2)-0.5, ec='white')
+    plt.xlim(bins[0], bins[-1])
     plt.title('Histogram')
     plt.show()
 
@@ -54,7 +56,7 @@ def lbp_pixel_calc(img, x, y, r, method):
         return sum(arr * (2 ** np.arange(len(arr))[::-1]))
 
 
-def lbp(img, r=1, method='riu', plot=False):
+def lbp(img, r=1, method='default', plot=False):
     height, width = img.shape
     img_lbp = np.zeros((height, width), np.uint8)
     for i in range(0, height):
