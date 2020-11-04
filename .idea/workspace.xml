@@ -22,9 +22,11 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="LBP riu optimization">
+    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="histogram fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/lbp.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/lbp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/create_ddbb.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_ddbb.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,7 +62,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.create_ddbb">
+  <component name="RunManager" selected="Python.main">
     <configuration name="create_ddbb" type="PythonConfigurationType" factoryName="Python">
       <module name="lbp-pyramid" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -187,7 +189,14 @@
       <option name="project" value="LOCAL" />
       <updated>1604227738515</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="histogram fix">
+      <created>1604339142459</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1604339142459</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -213,7 +222,8 @@
     <MESSAGE value="LBP riu and riu2" />
     <MESSAGE value="LBP final" />
     <MESSAGE value="LBP riu optimization" />
-    <option name="LAST_COMMIT_MESSAGE" value="LBP riu optimization" />
+    <MESSAGE value="histogram fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="histogram fix" />
   </component>
   <component name="WindowStateProjectService">
     <state x="416" y="120" width="1084" height="886" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1601207653858">
@@ -240,55 +250,59 @@
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
     <state x="743" y="337" width="424" height="491" key="FileChooserDialogImpl/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1603042367282" />
-    <state width="1825" height="208" key="GridCell.Tab.0.bottom" timestamp="1604338880034">
+    <state width="1825" height="195" key="GridCell.Tab.0.bottom" timestamp="1604518289831">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.0.bottom/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338880034" />
-    <state width="1825" height="208" key="GridCell.Tab.0.center" timestamp="1604338880034">
+    <state width="1825" height="195" key="GridCell.Tab.0.bottom/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604518289831" />
+    <state width="1825" height="195" key="GridCell.Tab.0.center" timestamp="1604518289830">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.0.center/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338880034" />
-    <state width="1825" height="208" key="GridCell.Tab.0.left" timestamp="1604338880034">
+    <state width="1825" height="195" key="GridCell.Tab.0.center/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604518289830" />
+    <state width="1825" height="195" key="GridCell.Tab.0.left" timestamp="1604518289830">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.0.left/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338880034" />
-    <state width="1825" height="208" key="GridCell.Tab.0.right" timestamp="1604338880034">
+    <state width="1825" height="195" key="GridCell.Tab.0.left/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604518289830" />
+    <state width="1825" height="195" key="GridCell.Tab.0.right" timestamp="1604518289830">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.0.right/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338880034" />
-    <state width="1825" height="208" key="GridCell.Tab.1.bottom" timestamp="1604338879978">
+    <state width="1825" height="195" key="GridCell.Tab.0.right/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604518289830" />
+    <state width="1825" height="208" key="GridCell.Tab.1.bottom" timestamp="1604346826115">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.1.bottom/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338879978" />
-    <state width="1825" height="208" key="GridCell.Tab.1.center" timestamp="1604338879978">
+    <state width="1825" height="208" key="GridCell.Tab.1.bottom/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604346826115" />
+    <state width="1825" height="208" key="GridCell.Tab.1.center" timestamp="1604346826115">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.1.center/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338879978" />
-    <state width="1825" height="208" key="GridCell.Tab.1.left" timestamp="1604338879978">
+    <state width="1825" height="208" key="GridCell.Tab.1.center/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604346826115" />
+    <state width="1825" height="208" key="GridCell.Tab.1.left" timestamp="1604346826115">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.1.left/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338879978" />
-    <state width="1825" height="208" key="GridCell.Tab.1.right" timestamp="1604338879978">
+    <state width="1825" height="208" key="GridCell.Tab.1.left/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604346826115" />
+    <state width="1825" height="208" key="GridCell.Tab.1.right" timestamp="1604346826115">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="1825" height="208" key="GridCell.Tab.1.right/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604338879978" />
+    <state width="1825" height="208" key="GridCell.Tab.1.right/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604346826115" />
     <state x="504" y="175" width="1022" height="737" key="SettingsEditor" timestamp="1601139202170">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
     <state x="449" y="1255" width="1299" height="737" key="SettingsEditor/0.1080.1920.1080/72.0.1848.1080@0.1080.1920.1080" timestamp="1600618990083" />
     <state x="504" y="175" width="1022" height="737" key="SettingsEditor/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1601139202170" />
-    <state x="555" y="276" width="800" height="535" key="Vcs.Push.Dialog.v2" timestamp="1604227744614">
+    <state x="555" y="276" width="800" height="535" key="Vcs.Push.Dialog.v2" timestamp="1604339146606">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state x="555" y="276" width="800" height="535" key="Vcs.Push.Dialog.v2/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604227744614" />
-    <state width="960" height="540" key="XDebugger.FullValuePopup" timestamp="1604220584360">
+    <state x="555" y="276" width="800" height="535" key="Vcs.Push.Dialog.v2/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604339146606" />
+    <state width="960" height="540" key="XDebugger.FullValuePopup" timestamp="1604516687915">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
-    <state width="960" height="540" key="XDebugger.FullValuePopup/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604220584360" />
+    <state width="960" height="540" key="XDebugger.FullValuePopup/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604516687915" />
     <state x="741" y="455" width="438" height="177" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1601111988013">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
     <state x="741" y="455" width="438" height="177" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1601111988013" />
+    <state x="687" y="148" width="618" height="783" key="find.popup" timestamp="1604341629276">
+      <screen x="72" y="0" width="1848" height="1080" />
+    </state>
+    <state x="687" y="148" width="618" height="783" key="find.popup/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1604341629276" />
     <state x="623" y="239" width="672" height="678" key="search.everywhere.popup" timestamp="1604163770397">
       <screen x="72" y="0" width="1848" height="1080" />
     </state>
