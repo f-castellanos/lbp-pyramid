@@ -5,7 +5,7 @@ import PIL
 
 
 class Preprocess:
-    def __init__(self, height, width, lbp_radius=1, lbp_method='default', mask_threshold=15, label_threshold=30):
+    def __init__(self, height, width, lbp_radius=1, lbp_method='default', mask_threshold=100, label_threshold=30):
         self.height = height
         self.width = width
         self.original_height = 584
@@ -25,16 +25,20 @@ class Preprocess:
         img = np.asarray(PIL.Image.open(path).convert('L'))
         return img.copy()
 
-    def apply_mask(self, img, mask):
+    def filter_by_mask(self, img, mask_path):
         """
-        Applies the given mask to the given image. The pixels corresponding to small mask values are discarded.
+        Cancels the points that correspond to small values of the mask.
         :param img: Numpy array containing the information of the image.
-        :param mask: Numpy array containing the information of the mask.
+        :param mask_path: str of the path of the mask.
         :return: Numpy array containing the information of the image after the mask has been applied.
         """
-        # img[mask < self.mask_threshold] = np.median(img[mask > 15])
-        img[mask < self.mask_threshold] = 0
-        return img
+        if mask_path is not None:
+            mask = Preprocess.read_img(mask_path)
+            # img[mask < self.mask_threshold] = np.median(img[mask >= self.mask_threshold])
+            img[mask < self.mask_threshold] = 0
+        else:
+            mask = None
+        return img, mask
 
     @staticmethod
     def rescale(img, dim):
@@ -103,16 +107,31 @@ class Preprocess:
         img = lbp(img, r=self.lbp_radius, method=self.lbp_method, plot=plot)
         return img
 
-    def remove_mask_data(self, dataset, mask):
+    def remove_mask_data(self, arr, mask, remove_borders=False):
         if mask is not None:
-            mask_and_borders = self.rescale_add_borders(mask)
-            return dataset[mask_and_borders.ravel() >= self.mask_threshold, :]
+            if remove_borders:
+                mask_and_borders = self.rescale_add_borders(mask)
+                return (arr[mask_and_borders.ravel() >= self.mask_threshold, :],
+                        np.where(mask_and_borders.ravel() >= self.mask_threshold)[0])
+            else:
+                return (arr[mask.ravel() >= self.mask_threshold, :],
+                        np.where(mask.ravel() >= self.mask_threshold)[0])
         else:
-            borders = self.rescale_add_borders(
-                np.ones((self.original_height, self.original_width)))
-            return dataset[borders.ravel() == 1, :]
+            if remove_borders:
+                borders = self.rescale_add_borders(
+                    np.ones((self.original_height, self.original_width)))
+                return (arr[borders.ravel() == 1, :],
+                        np.where(borders.ravel() >= self.mask_threshold)[0])
+            else:
+                return arr, np.where(arr.ravel() >= -1)[0]
 
-    def get_dataset(self, path, label_path=None, mask_path=None, balance=False, plot=False):
+    @staticmethod
+    def repeat_pixels(img, n_times):
+        img = img[np.repeat(np.arange(img.shape[0]), n_times), :]
+        img = img[:, np.repeat(np.arange(img.shape[1]), n_times)]
+        return img
+
+    def get_pyramid_dataset(self, path, label_path=None, mask_path=None, balance=False, plot=False):
         """
         Returns the pyramid LBP values for each pixel of the given image
         :param balance: Boolean to determine whether the dataset must be balanced
@@ -123,23 +142,19 @@ class Preprocess:
         :return: DataFrame of the features calculated from the image
         """
         img = Preprocess.read_img(path)
-        if mask_path is not None:
-            mask = Preprocess.read_img(path)
-            img = self.apply_mask(img, mask)
-        else:
-            mask = None
+        img, mask = self.filter_by_mask(img, mask_path)
         img = self.rescale_add_borders(img)
         lbp_matrix = np.zeros((self.height * self.width, 6))
-        for i in 2**np.arange(6):
-            img_resized = Preprocess.rescale(img.copy(), (self.width//i, self.height//i))
+        for i in 2 ** np.arange(6):
+            img_resized = Preprocess.rescale(img.copy(), (self.width // i, self.height // i))
             img_lbp = self.apply_lbp(img_resized, plot=plot)
-            img_lbp = img_lbp[np.repeat(np.arange(img_lbp.shape[0]), i), :]
-            img_lbp = img_lbp[:, np.repeat(np.arange(img_lbp.shape[1]), i)]
+            img_lbp = Preprocess.repeat_pixels(img_lbp, i)
             lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()
-        lbp_matrix = self.remove_mask_data(lbp_matrix, mask)
+        lbp_matrix, _ = self.remove_mask_data(lbp_matrix, mask, remove_borders=True)
         if label_path is not None:
-            label = self.get_label(label_path, mask)
-            lbp_matrix = np.concatenate((lbp_matrix, label.reshape(-1, 1)), axis=1)
+            label = self.get_label(label_path).reshape(-1, 1)
+            label, _ = self.remove_mask_data(label, mask)
+            lbp_matrix = np.concatenate((lbp_matrix, label), axis=1)
             if plot:
                 self.plot_preprocess_with_label(lbp_matrix[:, 0], lbp_matrix[:, -1], mask)
             if balance:
@@ -155,25 +170,55 @@ class Preprocess:
             df = pd.DataFrame(lbp_matrix, columns=['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'], dtype='uint8')
         return df
 
-    def get_label(self, path, mask):
+    def get_dataset_by_scale(self, img, label, plot, i):
+        img_resized = Preprocess.rescale(img, (self.width // i, self.height // i))
+        img_lbp = self.apply_lbp(img_resized, plot=plot)
+        img_lbp = Preprocess.repeat_pixels(img_lbp, i)
+        if label is not None:
+            label_resized = Preprocess.rescale(label.copy(), (self.width // i, self.height // i))
+            label_resized = Preprocess.repeat_pixels(label_resized, i)
+            if plot:
+                self.plot_preprocess_with_label(img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1), None)
+            return pd.DataFrame(np.concatenate((img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1)), axis=1))
+        else:
+            return pd.DataFrame(img_lbp.reshape(-1, 1))
+
+    def get_datasets_by_scale(self, path, label_path=None, mask_path=None, balance=False, plot=False):
         img = Preprocess.read_img(path)
-        img = Preprocess.gray_to_array(img).ravel()
+        img, mask = self.filter_by_mask(img, mask_path)
+        img = self.rescale_add_borders(img)
+        if label_path is not None:
+            label = self.get_label(label_path)
+            label = self.rescale_add_borders(label)
+        else:
+            label = None
+        dfs = [self.get_dataset_by_scale(img.copy(), label, plot, i) for i in 2 ** np.arange(6)]
+        _, selected_indexes = self.remove_mask_data(np.array(dfs[0]), mask, remove_borders=True)
+        if balance:
+            aux = np.random.choice(np.where(dfs[0].iloc[selected_indexes, -1] == 0)[0],
+                                   size=sum(dfs[0].iloc[selected_indexes, -1] == 1),
+                                   replace=False)
+            aux = np.concatenate((aux, np.where(dfs[0].iloc[selected_indexes, -1] == 1)[0]))
+            selected_indexes = selected_indexes[np.sort(aux)]
+        return [df.iloc[selected_indexes, :] for df in dfs]
+
+    def get_label(self, path):
+        img = Preprocess.read_img(path)
         img[img < self.label_threshold] = 0
         img[img > self.label_threshold] = 1
-        if mask is not None:
-            img = img[mask.ravel() >= self.mask_threshold]
         return img
 
     def plot_preprocess_with_label(self, img, label, mask):
         def array_to_mat(arr, mask_mat):
             mat = np.copy(mask_mat)
             mat[mat < self.mask_threshold] = 0
-            mat[mat >= self.mask_threshold] = arr
+            mat[mat >= self.mask_threshold] = arr.ravel()
             return mat
 
         if mask is None:
-            mask = np.zeros((self.original_height, self.original_width))
+            mask = np.ones((self.height, self.width)) * self.mask_threshold
         img = array_to_mat(img, mask)
+        img = (img * (255 / np.max(img))).astype(int)
         label = array_to_mat(label, mask)
         img = np.asarray(PIL.Image.fromarray(np.uint8(img)).convert('RGB')).copy()
         img[label == 1] = [255, 0, 0]
