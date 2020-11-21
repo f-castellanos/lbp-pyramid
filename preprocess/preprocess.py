@@ -131,10 +131,10 @@ class Preprocess:
         img = img[:, np.repeat(np.arange(img.shape[1]), n_times)]
         return img
 
-    def get_pyramid_dataset(self, path, label_path=None, mask_path=None, balance=False, plot=False):
+    def get_pyramid_dataset(self, path, label_path=None, mask_path=None, train_set=False, plot=False):
         """
         Returns the pyramid LBP values for each pixel of the given image
-        :param balance: Boolean to determine whether the dataset must be balanced
+        :param train_set: Boolean to determine whether the dataset must be balanced
         :param path: Image path
         :param label_path: Path of the label
         :param mask_path: Path of the mask
@@ -157,7 +157,7 @@ class Preprocess:
             lbp_matrix = np.concatenate((lbp_matrix, label), axis=1)
             if plot:
                 self.plot_preprocess_with_label(lbp_matrix[:, 0], lbp_matrix[:, -1], mask)
-            if balance:
+            if train_set:
                 random_sample = np.random.choice(np.where(lbp_matrix[:, -1] == 0)[0],
                                                  size=sum(lbp_matrix[:, -1] == 1),
                                                  replace=False)
@@ -170,37 +170,44 @@ class Preprocess:
             df = pd.DataFrame(lbp_matrix, columns=['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'], dtype='uint8')
         return df
 
-    def get_dataset_by_scale(self, img, label, plot, i):
+    def get_dataset_by_scale(self, img, mask, label, plot, train_set, i):
         img_resized = Preprocess.rescale(img, (self.width // i, self.height // i))
         img_lbp = self.apply_lbp(img_resized, plot=plot)
-        img_lbp = Preprocess.repeat_pixels(img_lbp, i)
         if label is not None:
             label_resized = Preprocess.rescale(label.copy(), (self.width // i, self.height // i))
-            label_resized = Preprocess.repeat_pixels(label_resized, i)
             if plot:
-                self.plot_preprocess_with_label(img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1), None)
-            return pd.DataFrame(np.concatenate((img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1)), axis=1))
+                self.plot_preprocess_with_label(img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1), None, i=i)
+            df = pd.DataFrame(np.concatenate((img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1)), axis=1))
+            if train_set:
+                mask_resized = Preprocess.rescale(mask, (self.width // i, self.height // i))
+                _, selected_indexes = self.remove_mask_data(np.array(df), mask_resized, remove_borders=False)
+                aux = np.random.choice(np.where(df.iloc[selected_indexes, -1] == 0)[0],
+                                       size=sum(df.iloc[selected_indexes, -1] == 1),
+                                       replace=False)
+                aux = np.concatenate((aux, np.where(df.iloc[selected_indexes, -1] == 1)[0]))
+                selected_indexes = selected_indexes[np.sort(aux)]
+                df = df.iloc[selected_indexes, :]
+            return df
         else:
             return pd.DataFrame(img_lbp.reshape(-1, 1))
 
-    def get_datasets_by_scale(self, path, label_path=None, mask_path=None, balance=False, plot=False):
+    def get_datasets_by_scale(self, path, label_path=None, mask_path=None, plot=False, train_set=True):
         img = Preprocess.read_img(path)
         img, mask = self.filter_by_mask(img, mask_path)
         img = self.rescale_add_borders(img)
+        mask_and_borders = self.rescale_add_borders(mask)
         if label_path is not None:
             label = self.get_label(label_path)
             label = self.rescale_add_borders(label)
         else:
             label = None
-        dfs = [self.get_dataset_by_scale(img.copy(), label, plot, i) for i in 2 ** np.arange(6)]
-        _, selected_indexes = self.remove_mask_data(np.array(dfs[0]), mask, remove_borders=True)
-        if balance:
-            aux = np.random.choice(np.where(dfs[0].iloc[selected_indexes, -1] == 0)[0],
-                                   size=sum(dfs[0].iloc[selected_indexes, -1] == 1),
-                                   replace=False)
-            aux = np.concatenate((aux, np.where(dfs[0].iloc[selected_indexes, -1] == 1)[0]))
-            selected_indexes = selected_indexes[np.sort(aux)]
-        return [df.iloc[selected_indexes, :] for df in dfs]
+        dfs = [self.get_dataset_by_scale(img.copy(), mask_and_borders.copy(), label, plot, train_set, i)
+               for i in 2 ** np.arange(6)]
+        if train_set:
+            selected_indexes = None
+        else:
+            _, selected_indexes = self.remove_mask_data(np.array(dfs[0]), mask, remove_borders=True)
+        return {'datasets': dfs, 'mask': selected_indexes}
 
     def get_label(self, path):
         img = Preprocess.read_img(path)
@@ -208,7 +215,7 @@ class Preprocess:
         img[img > self.label_threshold] = 1
         return img
 
-    def plot_preprocess_with_label(self, img, label, mask):
+    def plot_preprocess_with_label(self, img, label, mask, i=1):
         def array_to_mat(arr, mask_mat):
             mat = np.copy(mask_mat)
             mat[mat < self.mask_threshold] = 0
@@ -216,7 +223,7 @@ class Preprocess:
             return mat
 
         if mask is None:
-            mask = np.ones((self.height, self.width)) * self.mask_threshold
+            mask = np.ones((self.height//i, self.width//i)) * self.mask_threshold
         img = array_to_mat(img, mask)
         img = (img * (255 / np.max(img))).astype(int)
         label = array_to_mat(label, mask)

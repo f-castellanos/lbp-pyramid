@@ -10,8 +10,8 @@ import pickle
 
 PLOT = False
 # LBP_METHOD = 'default'
-# LBP_METHOD = 'riu'
-LBP_METHOD = 'riu2'
+LBP_METHOD = 'riu'
+# LBP_METHOD = 'riu2'
 # METHOD = 'get_pyramid_dataset'
 METHOD = 'get_datasets_by_scale'
 
@@ -26,11 +26,11 @@ def img_preprocess(i, image, mask, label, path,
     label_path = path + labels_path + label
     # Image processing
     if i < 14:
-        balance = True
+        train_set = True
     else:
-        balance = False
+        train_set = False
     df_img = getattr(preprocess, METHOD)(
-        img_path, label_path=label_path, mask_path=mask_path, balance=balance, plot=PLOT
+        img_path, label_path=label_path, mask_path=mask_path, train_set=train_set, plot=PLOT
     )
     return df_img
 
@@ -58,15 +58,15 @@ if __name__ == '__main__':
 
     # Train - Test dataframes
     if METHOD == 'get_datasets_by_scale':
-        def df_extract(df_set, i):
+        def train_set_extract(df_set, i):
             df = pd.DataFrame()
             for dfs in df_set:
-                df = pd.concat((df, dfs[i]), axis=0)
+                df = pd.concat((df, dfs['datasets'][i]), axis=0)
             return df
         with open(parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD + '.pkl', 'wb') as f:
-            pickle.dump([df_extract(df_list[:14], i) for i in range(len(df_list[0]))], f)
+            pickle.dump([train_set_extract(df_list[:14], i) for i in range(len(df_list[0]['datasets']))], f)
         with open(parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD + '.pkl', 'wb') as f:
-            pickle.dump([df_extract(df_list[14:], i) for i in range(len(df_list[0]))], f)
+            pickle.dump(df_list[14:], f)
     elif METHOD == 'get_pyramid_dataset':
         pd.concat(df_list[:14]).to_pickle(parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD + '.pkl')
         pd.concat(df_list[14:]).to_pickle(parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD + '.pkl')
