@@ -7,6 +7,7 @@ from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import pickle
 import numpy as np
 from preprocess.preprocess import Preprocess
+from confusion_matrix_pretty_print import print_confusion_matrix
 
 
 # LBP_METHOD = 'default'
@@ -54,9 +55,11 @@ if __name__ == '__main__':
         y_predicted = np.concatenate([y_predicted_test_pic[0] for y_predicted_test_pic in y_predicted_test_list])
         y_predicted = np.where(y_predicted > 0.5, 1, 0)
         y_test = np.concatenate([y_predicted_test_pic[1] for y_predicted_test_pic in y_predicted_test_list])
-        print(accuracy_score(y_test, y_predicted))
-        print(f1_score(y_test, y_predicted))
-        print(confusion_matrix(y_test, y_predicted))
+
+        print('Accuracy score: ' + str(accuracy_score(y_test, y_predicted)) + '\n')
+        print('F1 score: ' + str(f1_score(y_test, y_predicted)) + '\n')
+        print('Confusion matrix:\n')
+        print_confusion_matrix(y_test, y_predicted)
 
     elif METHOD == 'get_pyramid_dataset':
         df_train = pd.read_pickle(parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD + '.pkl')
@@ -69,6 +72,7 @@ if __name__ == '__main__':
         clf = init_clf_and_fit(df_train, y_train)
         y_predicted = clf.predict(df_test)
 
-        print(accuracy_score(y_test, y_predicted))
-        print(f1_score(y_test, y_predicted))
-        print(confusion_matrix(y_test, y_predicted))
+        print('Accuracy score: ' + str(accuracy_score(y_test, y_predicted)) + '\n')
+        print('F1 score: ' + str(f1_score(y_test, y_predicted)) + '\n')
+        print('Confusion matrix:\n')
+        print_confusion_matrix(y_test, y_predicted)

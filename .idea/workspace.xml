@@ -24,11 +24,7 @@
   <component name="ChangeListManager">
     <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="model for each resolution">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/create_ddbb.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_ddbb.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/preprocess_jupyter.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess_jupyter.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -227,7 +223,14 @@
       <option name="project" value="LOCAL" />
       <updated>1605888035555</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="model for each resolution">
+      <created>1605958620243</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1605958620243</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -329,9 +332,10 @@
     </state>
     <state x="449" y="1255" width="1299" height="737" key="SettingsEditor/0.1080.1920.1080/72.0.1848.1080@0.1080.1920.1080" timestamp="1600618990083" />
     <state x="504" y="175" width="1022" height="737" key="SettingsEditor/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1605950207306" />
-    <state x="555" y="276" width="800" height="535" key="Vcs.Push.Dialog.v2" timestamp="1605888039395">
-      <screen x="72" y="0" width="1848" height="1080" />
+    <state x="502" y="1356" width="800" height="535" key="Vcs.Push.Dialog.v2" timestamp="1605958624262">
+      <screen x="0" y="1080" width="1920" height="1080" />
     </state>
+    <state x="502" y="1356" key="Vcs.Push.Dialog.v2/0.1080.1920.1080/72.0.1848.1080@0.1080.1920.1080" timestamp="1605958624262" />
     <state x="555" y="276" width="800" height="535" key="Vcs.Push.Dialog.v2/0.1080.1920.1080/72.0.1848.1080@72.0.1848.1080" timestamp="1605888039395" />
     <state width="960" height="540" key="XDebugger.FullValuePopup" timestamp="1605954259895">
       <screen x="72" y="0" width="1848" height="1080" />
