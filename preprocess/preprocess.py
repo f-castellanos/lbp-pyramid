@@ -1,7 +1,9 @@
 from .lbp import lbp
 import pandas as pd
 import numpy as np
-import PIL
+from PIL import Image, ImageOps, ImageFilter
+import matplotlib.pyplot as plt
+import cv2
 
 
 class Preprocess:
@@ -22,7 +24,7 @@ class Preprocess:
         :param path: Image path
         :return: Numpy array containing the information of the image
         """
-        img = np.asarray(PIL.Image.open(path).convert('L'))
+        img = np.asarray(Image.open(path).convert('L'))
         return img.copy()
 
     def filter_by_mask(self, img, mask_path):
@@ -51,9 +53,9 @@ class Preprocess:
         :param dim: (width, height)
         :return: image resized
         """
-        im = PIL.Image.fromarray(np.uint8(img))
+        im = Image.fromarray(np.uint8(img))
         if img.shape != dim:
-            return np.asarray(im.resize(dim, resample=PIL.Image.LANCZOS))
+            return np.asarray(im.resize(dim, resample=Image.LANCZOS))
         else:
             return img
 
@@ -131,6 +133,121 @@ class Preprocess:
         img = img[:, np.repeat(np.arange(img.shape[1]), n_times)]
         return img
 
+    @staticmethod
+    def local_equalize_hist(img, plot=False):
+        clahe = cv2.createCLAHE(clipLimit=3, tileGridSize=(8, 8))
+        im_equalized = clahe.apply(img)
+        if plot:
+            img = np.asarray(img)
+            plt.figure()
+            plt.subplot(2, 2, 1)
+            plt.imshow(img, cmap='gray')
+            plt.title('Original Image')
+            plt.axis('off')
+            plt.subplot(2, 2, 2)
+            bins = np.arange(np.max(img) + 2) - 0.5
+            plt.hist(img.ravel(), bins=np.arange(np.max(img) + 2) - 0.5, ec='white')
+            plt.xlim(bins[0], bins[-1])
+            plt.title('Histogram')
+            plt.subplot(2, 2, 3)
+            plt.imshow(im_equalized, cmap='gray')
+            plt.title('Normalized Image')
+            plt.axis('off')
+            plt.subplot(2, 2, 4)
+            bins = np.arange(np.max(im_equalized) + 2) - 0.5
+            plt.hist(im_equalized.ravel(), bins=np.arange(np.max(im_equalized) + 2) - 0.5, ec='white')
+            plt.xlim(bins[0], bins[-1])
+            plt.title('Histogram')
+            plt.show()
+        return im_equalized
+
+    @staticmethod
+    def equalize_hist(img, mask=None, plot=False):
+        img = Image.fromarray(np.uint8(img))
+        if mask is not None:
+            mask = Image.fromarray(np.uint8(mask))
+        im_equalized = np.asarray(ImageOps.equalize(img, mask))
+        if plot:
+            img = np.asarray(img)
+            plt.figure()
+            plt.subplot(2, 2, 1)
+            plt.imshow(img, cmap='gray')
+            plt.title('Original Image')
+            plt.axis('off')
+            plt.subplot(2, 2, 2)
+            bins = np.arange(np.max(img) + 2) - 0.5
+            plt.hist(img.ravel(), bins=np.arange(np.max(img) + 2) - 0.5, ec='white')
+            plt.xlim(bins[0], bins[-1])
+            plt.title('Histogram')
+            plt.subplot(2, 2, 3)
+            plt.imshow(im_equalized, cmap='gray')
+            plt.title('Normalized Image')
+            plt.axis('off')
+            plt.subplot(2, 2, 4)
+            bins = np.arange(np.max(im_equalized) + 2) - 0.5
+            plt.hist(im_equalized.ravel(), bins=np.arange(np.max(im_equalized) + 2) - 0.5, ec='white')
+            plt.xlim(bins[0], bins[-1])
+            plt.title('Histogram')
+            plt.show()
+        return im_equalized
+
+    @staticmethod
+    def median_noise_reduction(img, plot=False):
+        img = Image.fromarray(np.uint8(img))
+        img_filtered = np.asarray(img.filter(ImageFilter.MedianFilter(size=3)))
+        if plot:
+            plt.figure()
+            plt.subplot(1, 2, 1)
+            plt.imshow(img, cmap='gray')
+            plt.title('Original Image')
+            plt.axis('off')
+            plt.subplot(1, 2, 2)
+            plt.imshow(img_filtered, cmap='gray')
+            plt.title('Filtered Image')
+            plt.axis('off')
+            plt.show()
+        return img_filtered
+
+    @staticmethod
+    def noise_reduction(img, plot=False):
+        img_filtered = cv2.fastNlMeansDenoising(img, None, 1.7, 7, 21)
+        if plot:
+            plt.figure()
+            plt.subplot(1, 2, 1)
+            plt.imshow(img, cmap='gray')
+            plt.title('Original Image')
+            plt.axis('off')
+            plt.subplot(1, 2, 2)
+            plt.imshow(img_filtered, cmap='gray')
+            plt.title('Filtered Image')
+            plt.axis('off')
+            plt.show()
+        return img_filtered
+
+    @staticmethod
+    def black_hat_filter(img, mask, plot=False):
+        kernel = np.ones((3, 3), np.uint8)
+        black_hat_img = cv2.morphologyEx(img,
+                                         # cv2.MORPH_TOPHAT,
+                                         cv2.MORPH_BLACKHAT,
+                                         kernel)
+        black_hat_img = Image.fromarray(np.uint8(black_hat_img))
+        if mask is not None:
+            mask = Image.fromarray(np.uint8(mask))
+        black_hat_img = np.asarray(ImageOps.equalize(black_hat_img, mask))
+        if plot:
+            plt.figure()
+            plt.subplot(1, 2, 1)
+            plt.imshow(img, cmap='gray')
+            plt.title('Original Image')
+            plt.axis('off')
+            plt.subplot(1, 2, 2)
+            plt.imshow(black_hat_img, cmap='gray')
+            plt.title('Filtered Image')
+            plt.axis('off')
+            plt.show()
+        return black_hat_img
+
     def get_pyramid_dataset(self, path, label_path=None, mask_path=None, train_set=False, plot=False):
         """
         Returns the pyramid LBP values for each pixel of the given image
@@ -194,6 +311,11 @@ class Preprocess:
     def get_datasets_by_scale(self, path, label_path=None, mask_path=None, plot=False, train_set=True):
         img = Preprocess.read_img(path)
         img, mask = self.filter_by_mask(img, mask_path)
+        img = Preprocess.noise_reduction(img, plot)  # TODO: add to pyramid dataset
+        img = Preprocess.local_equalize_hist(img, plot)  # TODO: add to pyramid dataset
+        img = Preprocess.noise_reduction(img, plot)  # TODO: add to pyramid dataset
+        img = Preprocess.median_noise_reduction(img, plot)  # TODO: add to pyramid dataset
+        # img = Preprocess.black_hat_filter(img, mask, plot)  # TODO: add to pyramid dataset
         img = self.rescale_add_borders(img)
         mask_and_borders = self.rescale_add_borders(mask)
         if label_path is not None:
@@ -223,11 +345,11 @@ class Preprocess:
             return mat
 
         if mask is None:
-            mask = np.ones((self.height//i, self.width//i)) * self.mask_threshold
+            mask = np.ones((self.height // i, self.width // i)) * self.mask_threshold
         img = array_to_mat(img, mask)
         img = (img * (255 / np.max(img))).astype(int)
         label = array_to_mat(label, mask)
-        img = np.asarray(PIL.Image.fromarray(np.uint8(img)).convert('RGB')).copy()
+        img = np.asarray(Image.fromarray(np.uint8(img)).convert('RGB')).copy()
         img[label == 1] = [255, 0, 0]
-        im = PIL.Image.fromarray(np.uint8(img))
+        im = Image.fromarray(np.uint8(img))
         im.show()

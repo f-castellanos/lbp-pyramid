@@ -8,10 +8,10 @@ from joblib import Parallel, delayed, parallel_backend
 import pickle
 
 
-PLOT = False
+PLOT = True
 # LBP_METHOD = 'default'
-LBP_METHOD = 'riu'
-# LBP_METHOD = 'riu2'
+# LBP_METHOD = 'riu'
+LBP_METHOD = 'riu2'
 # METHOD = 'get_pyramid_dataset'
 METHOD = 'get_datasets_by_scale'
 
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     labels = sorted(os.listdir(labels_path))
 
     # Image iteration
-    with parallel_backend('multiprocessing', n_jobs=-1):
+    with parallel_backend('multiprocessing', n_jobs=1):
         df_list = Parallel()(
             delayed(img_preprocess)(i, image, mask, label, path)
             for i, (image, mask, label) in enumerate(zip(images, masks, labels))
