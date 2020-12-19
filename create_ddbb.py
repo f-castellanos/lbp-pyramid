@@ -6,17 +6,22 @@ from pathlib import Path
 import pandas as pd
 from joblib import Parallel, delayed, parallel_backend
 import pickle
+import zipfile
 
 
-PLOT = True
+PLOT = False
+BALANCE = False
 # LBP_METHOD = 'default'
 # LBP_METHOD = 'riu'
 LBP_METHOD = 'riu2'
-# METHOD = 'get_pyramid_dataset'
-METHOD = 'get_datasets_by_scale'
+METHOD = 'get_pyramid_dataset'
+# METHOD = 'get_datasets_by_scale'
+# N_JOBS = 1
+N_JOBS = -1
 
 
-def img_preprocess(i, image, mask, label, path,
+def img_preprocess(preprocess,
+                   i, image, mask, label, path,
                    images_path='images/',
                    masks_path='mask/',
                    labels_path='1st_manual/'):
@@ -35,10 +40,10 @@ def img_preprocess(i, image, mask, label, path,
     return df_img
 
 
-if __name__ == '__main__':
+def main():
     # Object initialization
-    preprocess = Preprocess(lbp_radius=1, lbp_method=LBP_METHOD, height=608, width=576)
-    plot_results = PlotResults(height=608, width=576)
+    preprocess = Preprocess(lbp_radius=1, lbp_method=LBP_METHOD, height=608, width=576, balance=BALANCE)
+    _ = PlotResults(height=608, width=576)
     # DB folders
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     path = parent_path + '/dataset/training/'
@@ -50,23 +55,57 @@ if __name__ == '__main__':
     labels = sorted(os.listdir(labels_path))
 
     # Image iteration
-    with parallel_backend('multiprocessing', n_jobs=1):
+    with parallel_backend('multiprocessing', n_jobs=N_JOBS):
         df_list = Parallel()(
-            delayed(img_preprocess)(i, image, mask, label, path)
+            delayed(img_preprocess)(preprocess, i, image, mask, label, path)
             for i, (image, mask, label) in enumerate(zip(images, masks, labels))
         )
 
     # Train - Test dataframes
+    train_file_name = parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD
+    test_file_name = parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD
     if METHOD == 'get_datasets_by_scale':
         def train_set_extract(df_set, i):
             df = pd.DataFrame()
             for dfs in df_set:
                 df = pd.concat((df, dfs['datasets'][i]), axis=0)
             return df
-        with open(parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD + '.pkl', 'wb') as f:
+        with open(f'{train_file_name}.pkl', 'wb') as f:
             pickle.dump([train_set_extract(df_list[:14], i) for i in range(len(df_list[0]['datasets']))], f)
-        with open(parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD + '.pkl', 'wb') as f:
+        with open(f'{test_file_name}.pkl', 'wb') as f:
             pickle.dump(df_list[14:], f)
     elif METHOD == 'get_pyramid_dataset':
-        pd.concat(df_list[:14]).to_pickle(parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD + '.pkl')
-        pd.concat(df_list[14:]).to_pickle(parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD + '.pkl')
+        pd.concat(df_list[:14]).to_pickle(f'{train_file_name}.pkl')
+        pd.concat(df_list[14:]).to_pickle(f'{test_file_name}.pkl')
+
+    # Zip output
+    try:
+        os.remove(f'{train_file_name}.zip')
+    except OSError:
+        pass
+    zipfile.ZipFile(f'{train_file_name}.zip', 'w', zipfile.ZIP_DEFLATED).write(
+        f'{train_file_name}.pkl',
+        f'{train_file_name.split("/")[-1]}.pkl'
+    )
+    os.remove(f'{train_file_name}.pkl')
+    try:
+        os.remove(f'{test_file_name}.zip')
+    except OSError:
+        pass
+    zipfile.ZipFile(f'{test_file_name}.zip', 'w', zipfile.ZIP_DEFLATED).write(
+        f'{test_file_name}.pkl',
+        f'{test_file_name.split("/")[-1]}.pkl'
+    )
+    os.remove(f'{test_file_name}.pkl')
+
+
+##
+if __name__ == '__main__':
+    main()
+
+else:
+    ##
+    N_JOBS = -1
+    for LBP_METHOD in ['riu2', 'riu']:
+        for METHOD in ['get_pyramid_dataset', 'get_datasets_by_scale']:
+            main()

@@ -6,7 +6,7 @@ import os
 
 
 def plot_lbp(img, img_lbp):
-    plt.figure()
+    plt.figure(figsize=(16, 12))
     plt.subplot(1, 3, 1)
     plt.imshow(img, cmap='gray')
     plt.title('Original Image')

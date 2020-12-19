@@ -2,24 +2,26 @@
 import os
 from pathlib import Path
 import pandas as pd
-from sklearn.naive_bayes import GaussianNB
-from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import f1_score, accuracy_score
+from sklearn.preprocessing import OneHotEncoder
 import pickle
 import numpy as np
 from preprocess.preprocess import Preprocess
 from confusion_matrix_pretty_print import print_confusion_matrix
+import zipfile
 
 
 # LBP_METHOD = 'default'
 # LBP_METHOD = 'riu'
 LBP_METHOD = 'riu2'
-# METHOD = 'get_pyramid_dataset'
-METHOD = 'get_datasets_by_scale'
+METHOD = 'get_pyramid_dataset'
+# METHOD = 'get_datasets_by_scale'
 HEIGHT = 608
 
 
 def init_clf_and_fit(df, y):
-    classifier = GaussianNB()
+    classifier = MultinomialNB(fit_prior=True)
     classifier.fit(df, y)
     return classifier
 
@@ -43,14 +45,23 @@ def ensemble_prediction(classifiers, dfs_test):
 
 
 if __name__ == '__main__':
-    # Database load
+    # Database unzip
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
+    train_file_name = parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD
+    with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
+        zip_ref.extractall(f'{parent_path}/DB/')
+    test_file_name = parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD
+    with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
+        zip_ref.extractall(f'{parent_path}/DB/')
+
     if METHOD == 'get_datasets_by_scale':
-        with open(parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD + '.pkl', 'rb') as f:
+        with open(f'{train_file_name}.pkl', 'rb') as f:
             df_train_list = pickle.load(f)
+        os.remove(f'{train_file_name}.pkl')
         clf_list = [init_clf_and_fit(df_train.iloc[:, :-1], df_train.iloc[:, -1]) for df_train in df_train_list]
-        with open(parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD + '.pkl', 'rb') as f:
+        with open(f'{test_file_name}.pkl', 'rb') as f:
             df_test_list = pickle.load(f)
+        os.remove(f'{test_file_name}.pkl')
         y_predicted_test_list = [ensemble_prediction(clf_list, dfs_test) for dfs_test in df_test_list]
         y_predicted = np.concatenate([y_predicted_test_pic[0] for y_predicted_test_pic in y_predicted_test_list])
         y_predicted = np.where(y_predicted > 0.5, 1, 0)
@@ -62,8 +73,10 @@ if __name__ == '__main__':
         print_confusion_matrix(y_test, y_predicted)
 
     elif METHOD == 'get_pyramid_dataset':
-        df_train = pd.read_pickle(parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD + '.pkl')
-        df_test = pd.read_pickle(parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD + '.pkl')
+        df_train = pd.read_pickle(f'{train_file_name}.pkl')
+        os.remove(f'{train_file_name}.pkl')
+        df_test = pd.read_pickle(f'{test_file_name}.pkl')
+        os.remove(f'{test_file_name}.pkl')
         y_train = df_train.loc[:, 'label']
         y_test = df_test.loc[:, 'label']
         df_train.drop(columns=['label'], inplace=True)
