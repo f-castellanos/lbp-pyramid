@@ -22,13 +22,12 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="image preprocessing operators">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" afterDir="false" />
+    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="full preprocessing">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/create_ddbb.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_ddbb.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/lbp.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/lbp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/preprocess-2.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess-2.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.ipynb" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -249,7 +248,21 @@
       <option name="project" value="LOCAL" />
       <updated>1606665619506</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="full preprocessing">
+      <created>1608380237530</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1608380237530</updated>
+    </task>
+    <task id="LOCAL-00020" summary="full preprocessing">
+      <created>1608380249940</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1608380249940</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -279,7 +292,8 @@
     <MESSAGE value="preprocessing final" />
     <MESSAGE value="model for each resolution" />
     <MESSAGE value="image preprocessing operators" />
-    <option name="LAST_COMMIT_MESSAGE" value="image preprocessing operators" />
+    <MESSAGE value="full preprocessing" />
+    <option name="LAST_COMMIT_MESSAGE" value="full preprocessing" />
   </component>
   <component name="XDebuggerManager">
     <watches-manager>

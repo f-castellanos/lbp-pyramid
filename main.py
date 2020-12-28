@@ -12,11 +12,12 @@ from confusion_matrix_pretty_print import print_confusion_matrix
 import zipfile
 
 
+PLOT = True
 # LBP_METHOD = 'default'
 # LBP_METHOD = 'riu'
 LBP_METHOD = 'riu2'
-METHOD = 'get_pyramid_dataset'
-# METHOD = 'get_datasets_by_scale'
+# METHOD = 'get_pyramid_dataset'
+METHOD = 'get_datasets_by_scale'
 HEIGHT = 608
 
 
@@ -72,7 +73,7 @@ if __name__ == '__main__':
         print('Confusion matrix:\n')
         print_confusion_matrix(y_test, y_predicted)
 
-    elif METHOD == 'get_pyramid_dataset':
+    else:
         df_train = pd.read_pickle(f'{train_file_name}.pkl')
         os.remove(f'{train_file_name}.pkl')
         df_test = pd.read_pickle(f'{test_file_name}.pkl')
@@ -89,3 +90,17 @@ if __name__ == '__main__':
         print('F1 score: ' + str(f1_score(y_test, y_predicted)) + '\n')
         print('Confusion matrix:\n')
         print_confusion_matrix(y_test, y_predicted)
+
+    if PLOT:
+        label_predicted = np.array(y_predicted)
+        preprocess = Preprocess(height=608, width=576)
+        images_path = f'{parent_path}/dataset/training/images/'
+        images = sorted(os.listdir(images_path))[14:]
+        masks_path = f'{parent_path}/dataset/training/mask/'
+        masks = sorted(os.listdir(masks_path))[14:]
+        for image_path, mask_path in zip(images, masks):
+            img = Preprocess.read_img(images_path + image_path).ravel()
+            mask = Preprocess.read_img(masks_path + mask_path)
+            img = img[mask.ravel() > 100]
+            preprocess.plot_preprocess_with_label(img, label_predicted[:len(img)], mask)
+            label_predicted = np.delete(label_predicted, np.arange(len(img)))

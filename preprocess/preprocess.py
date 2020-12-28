@@ -252,6 +252,13 @@ class Preprocess:
             img_lbp = self.apply_lbp(img_resized, plot=plot)
             img_lbp = Preprocess.repeat_pixels(img_lbp, i)
             lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()
+        #  Original image
+        lbp_matrix = np.concatenate((
+                img.ravel().reshape(-1, 1),
+                lbp_matrix,
+            ),
+            axis=1
+        )
         lbp_matrix, _ = self.remove_mask_data(lbp_matrix, mask, remove_borders=True)
         if label_path is not None:
             label = self.get_label(label_path).reshape(-1, 1)
@@ -267,12 +274,15 @@ class Preprocess:
                     np.concatenate((random_sample, np.where(lbp_matrix[:, -1] == 1)[0]))
                 )
                 lbp_matrix = lbp_matrix[sample, :]
-            df = pd.DataFrame(lbp_matrix, columns=['1:1', '1:2', '1:4', '1:8', '1:16', '1:32', 'label'], dtype='uint8')
-            df = pd.concat((self.one_hot_encode(df.iloc[:, :-1].copy()), df.loc[:, 'label']), axis=1)
+            df = pd.DataFrame(lbp_matrix, columns=['Original', '1:1', '1:2', '1:4', '1:8', '1:16', '1:32', 'label'],
+                              dtype='uint8')
+            df = pd.concat((df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
+                           axis=1)
         else:
             df = self.one_hot_encode(
                 pd.DataFrame(lbp_matrix, columns=['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'], dtype='uint8')
             )
+            df = pd.concat((df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1].copy())), axis=1)
         return df
 
     ## Multiple models dataset constructor
@@ -293,16 +303,27 @@ class Preprocess:
                                            replace=False)
                     aux = np.concatenate((aux, np.where(df.iloc[selected_indexes, -1] == 1)[0]))
                     selected_indexes = selected_indexes[np.sort(aux)]
+                df = pd.concat((
+                    pd.Series(img.ravel()),
+                    df
+                ), axis=1)
                 df = df.iloc[selected_indexes, :]
             return pd.concat(
                 (
-                    self.one_hot_encode(df.iloc[:, 0].to_frame().copy(), multiple_scale=False).reset_index(drop=True),
-                    df.iloc[:, 1].reset_index(drop=True)
+                    df.iloc[:, 0].reset_index(drop=True),
+                    self.one_hot_encode(df.iloc[:, 1].to_frame().copy(), multiple_scale=False).reset_index(drop=True),
+                    df.iloc[:, -1].reset_index(drop=True)
                 ),
                 axis=1
             )
         else:
-            return self.one_hot_encode(pd.DataFrame(img_lbp.reshape(-1, 1)), multiple_scale=False)
+            return pd.concat(
+                (
+                    pd.Series(img.ravel()),
+                    self.one_hot_encode(pd.DataFrame(img_lbp.reshape(-1, 1)), multiple_scale=False)
+                ),
+                axis=1
+            )
 
     def get_datasets_by_scale(self, path, label_path=None, mask_path=None, plot=False, train_set=True):
         img = Preprocess.read_img(path)
