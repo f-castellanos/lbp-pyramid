@@ -9,15 +9,15 @@ import pickle
 import zipfile
 
 
-PLOT = False
+PLOT = True
 BALANCE = False
 # LBP_METHOD = 'default'
 # LBP_METHOD = 'riu'
 LBP_METHOD = 'riu2'
-METHOD = 'get_pyramid_dataset'
-# METHOD = 'get_datasets_by_scale'
+# METHOD = 'get_pyramid_dataset'
+METHOD = 'get_datasets_by_scale'
 # N_JOBS = 1
-N_JOBS = -1
+N_JOBS = 1
 
 
 def img_preprocess(preprocess,

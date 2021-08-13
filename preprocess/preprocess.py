@@ -45,7 +45,7 @@ class Preprocess:
         """
         im = Image.fromarray(np.uint8(img))
         if img.shape != dim:
-            return np.asarray(im.resize(dim, resample=Image.LANCZOS))
+            return np.asarray(im.resize((int(dim[0]), int(dim[1])), resample=Image.LANCZOS))
         else:
             return img
 
@@ -207,6 +207,7 @@ class Preprocess:
         label = array_to_mat(label, mask)
         img = np.asarray(Image.fromarray(np.uint8(img)).convert('RGB')).copy()
         img[label == 1] = [255, 0, 0]
+        img[label == 0] = [0, 0, 0]
         im = Image.fromarray(np.uint8(img))
         im.show()
 
@@ -337,9 +338,21 @@ class Preprocess:
         else:
             label = None
         dfs = [self.get_dataset_by_scale(img.copy(), mask_and_borders.copy(), label, plot, train_set, i)
-               for i in 2 ** np.arange(6)]
+               for i in 2.0 ** np.arange(-1, 6)]
         if train_set:
             selected_indexes = None
         else:
             _, selected_indexes = self.remove_mask_data(np.array(dfs[0]), mask, remove_borders=True)
         return {'datasets': dfs, 'mask': selected_indexes}
+
+# path = '/home/fer/Nextcloud/Master-IA/TFM/dataset/training/1st_manual/21_manual1.gif'
+# img = np.asarray(Image.open(path).convert('L'))
+# plt.figure()
+# plt.imshow(img, cmap='gray')
+# plt.show()
+# im = Image.fromarray(np.uint8(img))
+# # img = np.asarray(im.resize((int(584 * 2), int(565 *2)), resample=Image.BICUBIC))
+# img = np.asarray(im.resize((int(584 / 4), int(565 /4)), resample=Image.NEAREST))
+# plt.figure()
+# plt.imshow(img, cmap='gray')
+# plt.show()
