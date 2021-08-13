@@ -17,6 +17,9 @@
 ### Procesamiento inicial de la imagen
 
 1. En primer lugar, se aplica un filtro bilateral que permite eliminar parte del ruido sin disminuir la definición de los bordes existenes en la medida de lo posible.
+
+![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_1_mask_noise_reduction.png)
+
 2. En una segunda fase, se normaliza la imagen mediante la normalización de los histogramas en regiones locales de la imagen, permitiendo así resaltar los vasos sanguíneos de manera independiente a la intensidad luminosa de la imagen en la región que se encuentre.
 
 ### Aplicación del operador LBP
