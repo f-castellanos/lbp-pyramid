@@ -25,8 +25,7 @@
     <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="full preprocessing">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/create_ddbb.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_ddbb.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/preprocess-2.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess-2.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -274,7 +273,14 @@
       <option name="project" value="LOCAL" />
       <updated>1609182877252</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="full preprocessing">
+      <created>1628878269542</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1628878269542</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

@@ -6,4 +6,11 @@
 2. Ejecutar el comando 'source venv/bin/activate'
 3. Ejecutar el comando 'jupyter-notebook'
 
+## Preprocesamiento
+
+### Tratamiento inicial de la imagen
+
+La lectura de las imágenes se realiza en un único canal, es decir, en escala de grises.
+
+
 
