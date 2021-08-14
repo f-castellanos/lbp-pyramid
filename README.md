@@ -12,7 +12,6 @@
 
 - La lectura de las imágenes se realiza en un único canal, es decir, en escala de grises.
 - Se aplica la máscara proporcionada junto con las imágenes para anular el valor, y por lo tanto, descartar, aquellos píxeles que carezcan de relevancia.
-- La utilización de la imágen a diferentes escalas, conservando la equivalencia entre los píxeles, exige que las dimensiones de la misma sean múltiplos de 2 tantas veces como cambios de escala se realicen, con lo que es precisa una modificacion de la escala original de las imágenes. Con la finalidad de no distorsionarlas ni generar ruido, y dado que gracias a la máscara existe en todas ellas una región externa de píxeles nulos, se lleva a cabo una adición de píxeles de valor 0, aumentando dicha región, para obtener las dimensiones finales deseadas.
 
 ### Procesamiento inicial de la imagen
 
@@ -29,8 +28,11 @@
 ![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_3_2nd_noise_reduction.png)
 
 ### Aplicación del operador LBP
-1. Se lleva a cabo el reescalado de la imagen.
-2. Se aplica a las diferentes escalas el operador LBP (conservando invariante el valor del parámetro radio del operador ya que se simula mediante el reescalado la variacion de su valor).
+
+1. Dado que la imagen va a ser reescalada repetidamente a inferiores dimensiones en la simulación de la variación del radio del operador LBP, y dado que el reescalado se realiza reduciendo la dimensión de la imagen a 1/4 de su tamaño previo, es preciso que las dimensiones de altura y ancho de la imagen sean múltiplos de 2 tantas veces como reescalados se lleven a cabo. Con la finalidad de no distorsionarlas ni generar ruido, y dado que gracias a la máscara existe en todas ellas una región externa de píxeles nulos, se lleva a cabo una adición de píxeles de valor 0, aumentando dicha región, para obtener las dimensiones finales deseadas. Es decir, se añaden márgenes de información vacía en las imágenes.
+2. Se lleva a cabo el reescalado de la imagen.
+3. Se aplica a las diferentes escalas el operador LBP (conservando invariante el valor del parámetro radio del operador ya que se simula mediante el reescalado la variacion de su valor).
+4. Dado que en la base de datos generada cada píxel constituye una observación y el número de píxeles es variable, se tomará como instancia de la misma cada píxel de la imagen original, de modo que los valores LBP obtenidos a partir de las escalas inferiores serán asignados a todos los píxeles originales a partir de los que se ha generado el píxel de la nueva escala. Es decir, en el primer reescalado la imagen escalada tiene 1/4 del número de píxeles original, con lo que los nuevos píxeles equivalen a cuatro píxeles de la imagen original, los cuales poseerán en la base de datos el valor asignado al nuevo píxel en la operación LBP.
 
 # repeat_pixels que hace?
 
