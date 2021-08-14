@@ -12,6 +12,10 @@
 
 Fichero create_db.py, ejecución de la función main.
 
+Métodos:
+- get_datasets_by_scale: proporciona múltiples BBDD, reescalando tanto la imagen como el gold standard, con la finalidad de aplicar múltiples modelos de clasificación, uno por escala, y ensamblar posteriormente los resultados obtenidos para constituir el clasificador final.
+- get_pyramid_dataset: BBDD única en la que se encuentra la información de las diferentes escalas con la finalidad de aplicar un único clasificador sobre el conjunto total de datos.
+
 ## Preprocesamiento
 
 ### Tratamiento inicial de la imagen
