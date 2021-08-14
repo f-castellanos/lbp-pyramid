@@ -24,7 +24,6 @@ Métodos:
 - get_datasets_by_scale: proporciona múltiples BBDD, reescalando tanto la imagen como el gold standard, con la finalidad de aplicar múltiples modelos de clasificación, uno por escala, y ensamblar posteriormente los resultados obtenidos para constituir el clasificador final.
 - get_pyramid_dataset: BBDD única en la que se encuentra la información de las diferentes escalas con la finalidad de aplicar un único clasificador sobre el conjunto total de datos.
 
-
 ## Preprocesamiento
 
 ### Tratamiento inicial de la imagen
@@ -62,10 +61,9 @@ Métodos:
 
 5. [get_pyramid_dataset] Se añade la información de la imagen preprocesada como una característica adicional a los cálculos del operador LBP.
 6. Se elimina de la base de datos los píxeles que no forman parte de la máscara.
-7. Como procedimiento final de la constitución de la base de datos, se añade una nueva variable correspondiente a la etiqueta de cada píxel de la imagen original, es decir, una valor binario indicativo de la pertenencia a un vaso sanguíneo.
+7. Se aplica una codificación de las variables (one hot encode) para garantizar que los datos provenientes del operador LBP son empleados de manera discreta. De esta forma, cada variable correspondiente a una resolución, que contiene valores discretos correspondientes a las posibles etiquetas proporcionadas por el operador LBP en cada píxel, queda dividida en tantas columnas como etiquetas existen (10 para el operador LBP invariante a la rotación), donde tomará valor unitario para una y nulo para las restantes.
+8. Como procedimiento final de la constitución de la base de datos, se añade una nueva variable correspondiente a la etiqueta de cada píxel de la imagen original, es decir, una valor binario indicativo de la pertenencia a un vaso sanguíneo.
 
-Finalmente, en la matriz de información obtenida, cada fila constituye un píxel de la imagen de mayor resolución y cada columna corresponde a una resolución.
+Finalmente, en la matriz de información obtenida, cada fila constituye un píxel de la imagen de mayor resolución y cada columna corresponde un posible valor a cada resolución.
 
-### Procesamiento tras la aplicación del operador
-
-Se aplica una función que realiza la codificación de las variables (one hot encode) para garantizar que los datos provenientes del operador LBP son empleados de manera discreta.
+## Clasificación
