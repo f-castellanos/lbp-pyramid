@@ -12,7 +12,8 @@ from confusion_matrix_pretty_print import print_confusion_matrix
 import zipfile
 
 
-PLOT = True
+# PLOT = True
+PLOT = False
 # LBP_METHOD = 'default'
 # LBP_METHOD = 'riu'
 LBP_METHOD = 'riu2'

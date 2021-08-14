@@ -9,7 +9,8 @@ import pickle
 import zipfile
 
 
-PLOT = True
+# PLOT = True
+PLOT = False
 BALANCE = False
 # LBP_METHOD = 'default'
 # LBP_METHOD = 'riu'
