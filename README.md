@@ -27,7 +27,7 @@
 
 ![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_3_2nd_noise_reduction.png)
 
-### Aplicación del operador LBP
+### Aplicación del operador LBP - Generación de la base de datos
 
 1. Dado que la imagen va a ser reescalada repetidamente a inferiores dimensiones en la simulación de la variación del radio del operador LBP, y dado que el reescalado se realiza reduciendo la dimensión de la imagen a 1/4 de su tamaño previo, es preciso que las dimensiones de altura y ancho de la imagen sean múltiplos de 2 tantas veces como reescalados se lleven a cabo. Con la finalidad de no distorsionarlas ni generar ruido, y dado que gracias a la máscara existe en todas ellas una región externa de píxeles nulos, se lleva a cabo una adición de píxeles de valor 0, aumentando dicha región, para obtener las dimensiones finales deseadas. Es decir, se añaden márgenes de información vacía en las imágenes.
 2. Se lleva a cabo el reescalado de la imagen.
@@ -40,6 +40,12 @@
 ![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_4_lbp_4.png)
 ![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_4_lbp_5.png)
 ![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_4_lbp_6.png)
+
+5. Se añade la información de la imagen preprocesada como una característica adicional a los cálculos del operador LBP.
+6. Se elimina de la base de datos los píxeles que no forman parte de la máscara.
+7. Como procedimiento final de la constitución de la base de datos, se añade una nueva variable correspondiente a la etiqueta de cada píxel de la imagen original, es decir, una valor binario indicativo de la pertenencia a un vaso sanguíneo.
+
+Finalmente, en la matriz de información obtenida, cada fila constituye un píxel de la imagen de mayor resolución y cada columna corresponde a una resolución.
 
 ### Procesamiento tras la aplicación del operador
 
