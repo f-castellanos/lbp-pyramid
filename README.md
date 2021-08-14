@@ -34,7 +34,7 @@
 3. Se aplica a las diferentes escalas el operador LBP (conservando invariante el valor del parámetro radio del operador ya que se simula mediante el reescalado la variacion de su valor).
 4. Dado que en la base de datos generada cada píxel constituye una observación y el número de píxeles es variable, se tomará como instancia de la misma cada píxel de la imagen original, de modo que los valores LBP obtenidos a partir de las escalas inferiores serán asignados a todos los píxeles originales a partir de los que se ha generado el píxel de la nueva escala. Es decir, en el primer reescalado la imagen escalada tiene 1/4 del número de píxeles original, con lo que los nuevos píxeles equivalen a cuatro píxeles de la imagen original, los cuales poseerán en la base de datos el valor asignado al nuevo píxel en la operación LBP.
 
-# repeat_pixels que hace?
+![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_4_lbp.png)
 
 ### Procesamiento tras la aplicación del operador
 
