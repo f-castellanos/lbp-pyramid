@@ -66,8 +66,12 @@ Métodos:
 
 Finalmente, en la matriz de información obtenida, cada fila constituye un píxel de la imagen de mayor resolución y cada columna corresponde un posible valor a cada resolución.
 
+#### get_datasets_by_scale
+
+![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_5_BBDD_2.png)
+
 #### get_pyramid_dataset
 
-![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_5_BBDD.png)
+![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_5_BBDD_1.png)
 
 ## Clasificación
