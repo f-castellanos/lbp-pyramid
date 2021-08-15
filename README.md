@@ -75,3 +75,15 @@ Finalmente, en la matriz de información obtenida, cada fila constituye un píxe
 ![alt text](https://raw.githubusercontent.com/f-castellanos/lbp-pyramid/preprocess/readme_media/preprocess_5_BBDD_1.png)
 
 ## Clasificación
+
+### get_datasets_by_scale - opción descartada por la pérdida de información en el detalle del gold standard al reducir las dimensiones (TODO: añadir información e imágenes)
+
+Se tienen tantas bases de datos como escalas se hayan empleado. Para cada escala es entrena un clasificador (Naïve Bayes multinomial), que posteriormente son empleados de manera individual para la predicción en un conjunto de datos mantenido de manera independiente al proceso de entrenamiento.
+
+Finalmente, se lleva a cabo un proceso de ensamblado en el que se asocia la etiqueta de las resoluciones inferiores con respecto a los píxeles de la imagen original con los que se generaron respectivamente. Mediante la etiqueta más frecuente para cada píxel se determina la clasificación final.
+
+TODO: comentar que en las resoluciones inferiores se obtiene muy poca precisión, siendo la etiqueta prácticamente constante.
+
+### get_pyramid_dataset
+
+Se utiliza un único clasificador que se entrena a partir de un conjunto de datos de la BBDD generada y se comprueba su poder predictivo mediante datos independientes.
