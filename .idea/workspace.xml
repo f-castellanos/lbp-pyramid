@@ -22,11 +22,9 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="readme media">
-      <change beforePath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="project structure">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/modeling.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/modeling.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -345,7 +343,14 @@
       <option name="project" value="LOCAL" />
       <updated>1628935610014</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="project structure">
+      <created>1629730162080</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1629730162081</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -379,7 +384,8 @@
     <MESSAGE value="readme images" />
     <MESSAGE value="type in create_db file" />
     <MESSAGE value="readme media" />
-    <option name="LAST_COMMIT_MESSAGE" value="readme media" />
+    <MESSAGE value="project structure" />
+    <option name="LAST_COMMIT_MESSAGE" value="project structure" />
   </component>
   <component name="XDebuggerManager">
     <watches-manager>
