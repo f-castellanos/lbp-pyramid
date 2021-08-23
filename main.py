@@ -1,16 +1,16 @@
 ##
 import os
-from pathlib import Path
-import pandas as pd
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import f1_score, accuracy_score
-from sklearn.preprocessing import OneHotEncoder
 import pickle
-import numpy as np
-from preprocess.preprocess import Preprocess
-from confusion_matrix_pretty_print import print_confusion_matrix
 import zipfile
+from pathlib import Path
 
+import numpy as np
+import pandas as pd
+from sklearn.metrics import f1_score, accuracy_score
+from sklearn.naive_bayes import MultinomialNB
+
+from confusion_matrix_pretty_print import print_confusion_matrix
+from preprocess.preprocess import Preprocess
 
 # PLOT = True
 PLOT = False
