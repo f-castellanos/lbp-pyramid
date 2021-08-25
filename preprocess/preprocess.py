@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 import cv2
 from sklearn.preprocessing import OneHotEncoder
 import pickle
+from PARAMETERS import *
+
+
+class ParameterError(Exception):
+    pass
 
 
 class Preprocess:
@@ -20,8 +25,24 @@ class Preprocess:
         self.label_threshold = label_threshold
         self.lbp_radius = lbp_radius
         self.lbp_method = lbp_method
+        self.parameters_verification()
 
-    ##  Basic Operations
+    @staticmethod
+    def parameters_verification():
+        """
+        Verification of the given execution parameters
+        :return: None
+        """
+        valid_parameters = {
+            'LBP_METHOD': ['default', 'riu', 'riu2'],
+            'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
+            'INTERPOLATION_ALGORITHM': ['lanczos', 'nearest', 'bicubic'],
+            'BALANCE': [True, False]
+        }
+        for k, v in valid_parameters.items():
+            if globals()[k] not in v:
+                raise ParameterError(f"{INTERPOLATION_ALGORITHM} is not correctly defined")
+
     @staticmethod
     def read_img(path):
         """
@@ -43,9 +64,14 @@ class Preprocess:
         :param dim: (width, height)
         :return: image resized
         """
+        resample_map = {
+            'lanczos': Image.LANCZOS,
+            'nearest': Image.NEAREST,
+            'bicubic': Image.BICUBIC
+        }
         im = Image.fromarray(np.uint8(img))
         if img.shape != dim:
-            return np.asarray(im.resize((int(dim[0]), int(dim[1])), resample=Image.LANCZOS))
+            return np.asarray(im.resize((int(dim[0]), int(dim[1])), resample=resample_map[INTERPOLATION_ALGORITHM]))
         else:
             return img
 
@@ -201,7 +227,7 @@ class Preprocess:
             return mat
 
         if mask is None:
-            mask = np.ones((self.height // i, self.width // i)) * self.mask_threshold
+            mask = np.ones((int(self.height // i), int(self.width // i))) * self.mask_threshold
         img = array_to_mat(img, mask)
         img = (img * (255 / np.max(img))).astype(int)
         label = array_to_mat(label, mask)
@@ -232,7 +258,7 @@ class Preprocess:
                 df[column] = np.zeros(df.shape[0]).astype(int)
         return df.loc[:, column_list]
 
-    ## Single model dataset constructor
+    # Single model dataset constructor
     def get_pyramid_dataset(self, path, label_path=None, mask_path=None, train_set=False, plot=False):
         """
         Returns the pyramid LBP values for each pixel of the given image
@@ -247,8 +273,9 @@ class Preprocess:
         img, mask = self.filter_by_mask(img, mask_path)
         img = Preprocess.img_processing(img, plot)
         img = self.rescale_add_borders(img)
-        lbp_matrix = np.zeros((self.height * self.width, 6))
-        for i in 2 ** np.arange(6):
+        n_scales = 6
+        lbp_matrix = np.zeros((self.height * self.width, n_scales))
+        for i in 2 ** np.arange(n_scales):
             img_resized = Preprocess.rescale(img.copy(), (self.width // i, self.height // i))
             img_lbp = self.apply_lbp(img_resized, plot=plot)
             img_lbp = Preprocess.repeat_pixels(img_lbp, i)
@@ -286,7 +313,7 @@ class Preprocess:
             df = pd.concat((df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1].copy())), axis=1)
         return df
 
-    ## Multiple models dataset constructor
+    # Multiple models dataset constructor
     def get_dataset_by_scale(self, img, mask, label, plot, train_set, i):
         img_resized = Preprocess.rescale(img, (self.width // i, self.height // i))
         img_lbp = self.apply_lbp(img_resized, plot=plot)
@@ -338,7 +365,7 @@ class Preprocess:
         else:
             label = None
         dfs = [self.get_dataset_by_scale(img.copy(), mask_and_borders.copy(), label, plot, train_set, i)
-               for i in 2.0 ** np.arange(-1, 6)]
+               for i in 2.0 ** np.arange(-1, 6)]  # TODO: el -1 es lo que genera escala el doble
         if train_set:
             selected_indexes = None
         else:

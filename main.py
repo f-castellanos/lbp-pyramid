@@ -11,15 +11,7 @@ from sklearn.naive_bayes import MultinomialNB
 
 from confusion_matrix_pretty_print import print_confusion_matrix
 from preprocess.preprocess import Preprocess
-
-# PLOT = True
-PLOT = False
-# LBP_METHOD = 'default'
-# LBP_METHOD = 'riu'
-LBP_METHOD = 'riu2'
-METHOD = 'get_pyramid_dataset'
-# METHOD = 'get_datasets_by_scale'
-HEIGHT = 608
+from PARAMETERS import *
 
 
 def init_clf_and_fit(df, y):
@@ -49,10 +41,11 @@ def ensemble_prediction(classifiers, dfs_test):
 if __name__ == '__main__':
     # Database unzip
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
-    train_file_name = parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD
+    config_file_name = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}_balance-{BALANCE}"
+    train_file_name = f"{parent_path}/DB/train_train_{config_file_name}"
     with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
         zip_ref.extractall(f'{parent_path}/DB/')
-    test_file_name = parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD
+    test_file_name = f"{parent_path}/DB/train_test_{config_file_name}"
     with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
         zip_ref.extractall(f'{parent_path}/DB/')
 

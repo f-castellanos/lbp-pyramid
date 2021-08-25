@@ -7,18 +7,7 @@ import pandas as pd
 from joblib import Parallel, delayed, parallel_backend
 import pickle
 import zipfile
-
-
-# PLOT = True
-PLOT = False
-BALANCE = False
-# LBP_METHOD = 'default'
-# LBP_METHOD = 'riu'
-LBP_METHOD = 'riu2'
-# METHOD = 'get_pyramid_dataset'
-METHOD = 'get_datasets_by_scale'
-# N_JOBS = 1
-N_JOBS = 1
+from PARAMETERS import *
 
 
 def img_preprocess(preprocess,
@@ -63,8 +52,9 @@ def main():
         )
 
     # Train - Test dataframes
-    train_file_name = parent_path + '/DB/train_train_' + LBP_METHOD + '_' + METHOD
-    test_file_name = parent_path + '/DB/train_test_' + LBP_METHOD + '_' + METHOD
+    config_file_name = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}_balance-{BALANCE}"
+    train_file_name = f"{parent_path}/DB/train_train_{config_file_name}"
+    test_file_name = f"{parent_path}/DB/train_test_{config_file_name}"
     if METHOD == 'get_datasets_by_scale':
         def train_set_extract(df_set, i):
             df = pd.DataFrame()
