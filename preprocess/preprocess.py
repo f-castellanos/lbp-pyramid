@@ -1,30 +1,52 @@
-from .lbp import lbp
-import pandas as pd
-import numpy as np
-from PIL import Image
-import matplotlib.pyplot as plt
-import cv2
-from sklearn.preprocessing import OneHotEncoder
+import os
 import pickle
-from PARAMETERS import *
+from pathlib import Path
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from PIL import Image
+from sklearn.preprocessing import OneHotEncoder
+
+import PARAMETERS
+from .lbp import lbp
 
 
 class ParameterError(Exception):
     pass
 
 
+VALID_PARAMETERS = {
+    # 'LBP_METHOD': ['riu2'],
+    'LBP_METHOD': ['riu2', 'default', 'riu'],
+    # 'METHOD': ['get_pyramid_dataset'],
+    'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
+    'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
+    'BALANCE': [False, True],
+    'N_SCALES': list(range(3, 7)),
+    'GRAY_INTENSITY': [True, False],
+    'X2SCALE': [False, True],
+}
+
+
+PARENT_PATH = str(Path(os.path.dirname(os.path.abspath(__file__))).parent.parent)
+
+
 class Preprocess:
     def __init__(self, height, width, balance=False, lbp_radius=1,
                  lbp_method='default', mask_threshold=100, label_threshold=30):
-        self.height = height
-        self.width = width
+        self.height = height * 2 if PARAMETERS.X2SCALE else height
+        self.width = width * 2 if PARAMETERS.X2SCALE else width
         self.balance = balance
-        self.original_height = 584
-        self.original_width = 565
+        self.original_height = 584 * 2 if PARAMETERS.X2SCALE else height
+        self.original_width = 565 * 2 if PARAMETERS.X2SCALE else width
         self.mask_threshold = mask_threshold
         self.label_threshold = label_threshold
         self.lbp_radius = lbp_radius
         self.lbp_method = lbp_method
+        self.path = None
+        self.scale = None
         self.parameters_verification()
 
     @staticmethod
@@ -33,24 +55,21 @@ class Preprocess:
         Verification of the given execution parameters
         :return: None
         """
-        valid_parameters = {
-            'LBP_METHOD': ['default', 'riu', 'riu2'],
-            'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
-            'INTERPOLATION_ALGORITHM': ['lanczos', 'nearest', 'bicubic'],
-            'BALANCE': [True, False]
-        }
-        for k, v in valid_parameters.items():
-            if globals()[k] not in v:
-                raise ParameterError(f"{INTERPOLATION_ALGORITHM} is not correctly defined")
+        for k, v in VALID_PARAMETERS.items():
+            if getattr(PARAMETERS, k) not in v:
+                raise ParameterError(f"{PARAMETERS.INTERPOLATION_ALGORITHM} is not correctly defined")
 
-    @staticmethod
-    def read_img(path):
+    def read_img(self, path):
         """
         Reads a image given the path
         :param path: Image path
         :return: Numpy array containing the information of the image
         """
         img = np.asarray(Image.open(path).convert('L'))
+        if PARAMETERS.X2SCALE:
+            img = self.rescale(
+                img.copy(), (img.shape[1] * 2, img.shape[0] * 2)
+            )
         return img.copy()
 
     @staticmethod
@@ -71,7 +90,8 @@ class Preprocess:
         }
         im = Image.fromarray(np.uint8(img))
         if img.shape != dim:
-            return np.asarray(im.resize((int(dim[0]), int(dim[1])), resample=resample_map[INTERPOLATION_ALGORITHM]))
+            return np.asarray(
+                im.resize((int(dim[0]), int(dim[1])), resample=resample_map[PARAMETERS.INTERPOLATION_ALGORITHM]))
         else:
             return img
 
@@ -104,7 +124,7 @@ class Preprocess:
     def gray_to_array(img):
         return img.ravel()
 
-    ## Mask Operations
+    # Mask Operations
     def remove_mask_data(self, arr, mask, remove_borders=False):
         if mask is not None:
             if remove_borders:
@@ -131,14 +151,14 @@ class Preprocess:
         :return: Numpy array containing the information of the image after the mask has been applied.
         """
         if mask_path is not None:
-            mask = Preprocess.read_img(mask_path)
+            mask = self.read_img(mask_path)
             # img[mask < self.mask_threshold] = np.median(img[mask >= self.mask_threshold])
             img[mask < self.mask_threshold] = 0
         else:
             mask = None
         return img, mask
 
-    ##  LBP
+    #  LBP
     def apply_lbp(self, img, plot=False):
         """
         Returns the LBP values for the given image
@@ -146,10 +166,19 @@ class Preprocess:
         :param plot: Boolean to determine whether to plot the results.
         :return: Numpy array containing the information of the LBP image.
         """
-        img = lbp(img, r=self.lbp_radius, method=self.lbp_method, plot=plot)
-        return img
+        scale = self.scale/2 if PARAMETERS.X2SCALE else self.scale
+        try:
+            with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
+                      f'_{scale}_{PARAMETERS.LBP_METHOD}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'rb') as f:
+                lbp_img = pickle.load(f)
+        except FileNotFoundError:
+            lbp_img = lbp(img, r=self.lbp_radius, method=self.lbp_method, plot=plot)
+            with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
+                      f'_{scale}_{PARAMETERS.LBP_METHOD}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'wb') as f:
+                pickle.dump(lbp_img, f)
+        return lbp_img
 
-    ## Image transformations
+    # Image transformations
     @staticmethod
     def local_equalize_hist(img, plot=False):
         cla_he = cv2.createCLAHE(clipLimit=3, tileGridSize=(8, 8))
@@ -212,11 +241,11 @@ class Preprocess:
         img = Preprocess.noise_reduction(img, plot)
         return img
 
-    ## Gold Standard
+    # Gold Standard
     def get_label(self, path):
-        img = Preprocess.read_img(path)
+        img = self.read_img(path)
         img[img < self.label_threshold] = 0
-        img[img > self.label_threshold] = 1
+        img[img >= self.label_threshold] = 1
         return img
 
     def plot_preprocess_with_label(self, img, label, mask, i=1):
@@ -233,12 +262,16 @@ class Preprocess:
         label = array_to_mat(label, mask)
         img = np.asarray(Image.fromarray(np.uint8(img)).convert('RGB')).copy()
         img[label == 1] = [255, 0, 0]
-        img[label == 0] = [0, 0, 0]
+        # img[label == 0] = [0, 0, 0]
         im = Image.fromarray(np.uint8(img))
-        im.show()
+        plt.figure(figsize=(15, 11), dpi=80)
+        plt.imshow(im)
+        plt.show()
+        # im.show()
 
-    ## Encoding
+    # Encoding
     def one_hot_encode(self, df, multiple_scale=True):
+        original_columns = list(df.columns)
         encoder = OneHotEncoder()
         df = df.applymap(str)
         encoder.fit(df)
@@ -255,7 +288,10 @@ class Preprocess:
         missing_columns = np.setdiff1d(column_list, list(df.columns))
         if len(missing_columns) > 0:
             for column in missing_columns:
-                df[column] = np.zeros(df.shape[0]).astype(int)
+                if PARAMETERS.METHOD == 'get_datasets_by_scale' or column.split('_')[-2] in original_columns:
+                    df[column] = np.zeros(df.shape[0]).astype(int)
+                else:
+                    column_list.remove(column)
         return df.loc[:, column_list]
 
     # Single model dataset constructor
@@ -269,30 +305,34 @@ class Preprocess:
         :param plot: Boolean to determine whether to plot the results
         :return: DataFrame of the features calculated from the image
         """
-        img = Preprocess.read_img(path)
+        self.path = path
+        img = self.read_img(path)
         img, mask = self.filter_by_mask(img, mask_path)
         img = Preprocess.img_processing(img, plot)
         img = self.rescale_add_borders(img)
-        n_scales = 6
-        lbp_matrix = np.zeros((self.height * self.width, n_scales))
-        for i in 2 ** np.arange(n_scales):
+        lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES))
+        for i in 2 ** np.arange(PARAMETERS.N_SCALES):
             img_resized = Preprocess.rescale(img.copy(), (self.width // i, self.height // i))
+            self.scale = i
             img_lbp = self.apply_lbp(img_resized, plot=plot)
             img_lbp = Preprocess.repeat_pixels(img_lbp, i)
             lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()
         #  Original image
-        lbp_matrix = np.concatenate((
-                img.ravel().reshape(-1, 1),
-                lbp_matrix,
-            ),
-            axis=1
-        )
+        if PARAMETERS.GRAY_INTENSITY:
+            lbp_matrix = np.concatenate((
+                    img.copy().ravel().reshape(-1, 1),
+                    lbp_matrix,
+                ),
+                axis=1
+            )
         lbp_matrix, _ = self.remove_mask_data(lbp_matrix, mask, remove_borders=True)
+        scale_names = ['1:0.5', '1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][
+                      int(not PARAMETERS.X2SCALE):PARAMETERS.N_SCALES+int(not PARAMETERS.X2SCALE)]
         if label_path is not None:
             label = self.get_label(label_path).reshape(-1, 1)
             label, _ = self.remove_mask_data(label, mask)
             lbp_matrix = np.concatenate((lbp_matrix, label), axis=1)
-            if plot:
+            if plot or PARAMETERS.PLOT_LBP_LABEL:
                 self.plot_preprocess_with_label(lbp_matrix[:, 0], lbp_matrix[:, -1], mask)
             if train_set and self.balance is True and sum(lbp_matrix[:, -1] == 1) > 0:
                 random_sample = np.random.choice(np.where(lbp_matrix[:, -1] == 0)[0],
@@ -302,24 +342,39 @@ class Preprocess:
                     np.concatenate((random_sample, np.where(lbp_matrix[:, -1] == 1)[0]))
                 )
                 lbp_matrix = lbp_matrix[sample, :]
-            df = pd.DataFrame(lbp_matrix, columns=['Original', '1:1', '1:2', '1:4', '1:8', '1:16', '1:32', 'label'],
-                              dtype='uint8')
-            df = pd.concat((df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
-                           axis=1)
+
+            if PARAMETERS.GRAY_INTENSITY:
+                df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names + ['label'], dtype='uint8')
+                df = pd.concat(
+                    (df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
+                    axis=1
+                )
+            else:
+                df = pd.DataFrame(lbp_matrix, columns=scale_names + ['label'], dtype='uint8')
+                df = pd.concat(
+                    (self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
+                    axis=1
+                )
         else:
             df = self.one_hot_encode(
-                pd.DataFrame(lbp_matrix, columns=['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'], dtype='uint8')
+                pd.DataFrame(lbp_matrix, columns=scale_names, dtype='uint8')
             )
-            df = pd.concat((df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1].copy())), axis=1)
+            if PARAMETERS.GRAY_INTENSITY:
+                df = pd.concat((df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1].copy())), axis=1)
+            else:
+                df = pd.concat((self.one_hot_encode(df.iloc[:, 1].copy())), axis=1)
+        # if df.shape[1] < 1:
+        #     a = 0
         return df
 
     # Multiple models dataset constructor
     def get_dataset_by_scale(self, img, mask, label, plot, train_set, i):
         img_resized = Preprocess.rescale(img, (self.width // i, self.height // i))
+        self.scale = i
         img_lbp = self.apply_lbp(img_resized, plot=plot)
         if label is not None:
             label_resized = Preprocess.rescale(label.copy(), (self.width // i, self.height // i))
-            if plot:
+            if plot or PARAMETERS.PLOT_LBP_LABEL:
                 self.plot_preprocess_with_label(img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1), None, i=i)
             df = pd.DataFrame(np.concatenate((img_lbp.reshape(-1, 1), label_resized.reshape(-1, 1)), axis=1))
             if train_set:
@@ -354,7 +409,8 @@ class Preprocess:
             )
 
     def get_datasets_by_scale(self, path, label_path=None, mask_path=None, plot=False, train_set=True):
-        img = Preprocess.read_img(path)
+        self.path = path
+        img = self.read_img(path)
         img, mask = self.filter_by_mask(img, mask_path)
         img = Preprocess.img_processing(img, plot)
         img = self.rescale_add_borders(img)
@@ -365,7 +421,7 @@ class Preprocess:
         else:
             label = None
         dfs = [self.get_dataset_by_scale(img.copy(), mask_and_borders.copy(), label, plot, train_set, i)
-               for i in 2.0 ** np.arange(-1, 6)]  # TODO: el -1 es lo que genera escala el doble
+               for i in 2 ** np.arange(PARAMETERS.N_SCALES)]
         if train_set:
             selected_indexes = None
         else:
