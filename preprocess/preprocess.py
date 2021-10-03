@@ -168,6 +168,8 @@ class Preprocess:
         """
         scale = self.scale/2 if PARAMETERS.X2SCALE else self.scale
         try:
+            if plot:
+                raise FileNotFoundError
             with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
                       f'_{scale}_{PARAMETERS.LBP_METHOD}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'rb') as f:
                 lbp_img = pickle.load(f)
