@@ -7,21 +7,71 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import MultinomialNB, CategoricalNB
 from xgboost import XGBClassifier
+import lightgbm as lgb
 
 from confusion_matrix_pretty_print import print_confusion_matrix
 from preprocess.preprocess import Preprocess
 import PARAMETERS
 
 
+# class EnsembleClassifier:
+#     def __init__(self, num_columns):
+#         self.num_columns = num_columns
+#         self.multi_clf = MultinomialNB(fit_prior=True)
+#         self.cat_clf = CategoricalNB(fit_prior=True)
+#
+#     def fit(self, x, y):
+#         self.num_columns = [col for col in self.num_columns if col in x]
+#         if len(self.num_columns) > 0:
+#             num_x = x[self.num_columns]
+#             x.drop(columns=self.num_columns, inplace=True)
+#             self.multi_clf.fit(num_x, y)
+#             x = pd.concat(
+#                 (x, self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
+#                 axis=1
+#             )
+#         self.cat_clf.fit(x, y)
+#
+#     def predict(self, x):
+#         if len(self.num_columns) > 0:
+#             num_y = self.multi_clf.predict(x)
+#         cat_y = self.cat_clf.predict(x)
+
+
+class LGBMClassifierColNames(lgb.LGBMClassifier):
+    def fit(self, x, *args, **kwargs):
+        x.columns = [col.replace(':', '') for col in list(x.columns)]
+        return super().fit(x, *args, **kwargs)
+
+    def predict(self, x, *args, **kwargs):
+        x.columns = [col.replace(':', '') for col in list(x.columns)]
+        return super().predict(x, *args, **kwargs)
+
+
 def init_clf_and_fit(df, y, xgb=False):
     if xgb:
-        classifier = XGBClassifier(n_jobs=-1, objective='binary:logistic')
+        # clf = XGBClassifier(n_jobs=-1, objective='binary:logistic', enable_categorical=True)
+        clf = LGBMClassifierColNames(num_leaves=15, max_depth=-1,
+                                     random_state=42,
+                                     verbose=0,
+                                     metric='None',
+                                     n_jobs=-1,
+                                     n_estimators=1000,
+                                     colsample_bytree=0.9,
+                                     subsample=0.9,
+                                     learning_rate=0.1)
     else:
-        classifier = MultinomialNB(fit_prior=True)
-    classifier.fit(df, y)
-    return classifier
+        # if 'Original' in df:
+        #     multi_clf = MultinomialNB(fit_prior=True)
+        #     multi_clf.fit(df[['Original']], y)
+        #     df.drop(columns=['Original'], inplace=True)
+        clf = CategoricalNB(fit_prior=True)
+        # if 'Original' in df:
+        #     clf = RandomForestClassifier(estimators=[('multi', multi_clf), ('cat', clf)])
+    clf.fit(df, y)
+    return clf
 
 
 def ensemble_prediction(classifiers, dfs_test):
@@ -115,7 +165,7 @@ def main(xgb=False, plot_once=False):
 
 if __name__ == '__main__':
     if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
-        main()
+        main(xgb=False)
     else:
         metrics = pd.DataFrame(columns=[
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',
@@ -127,27 +177,28 @@ if __name__ == '__main__':
             properties = PARAMETERS.FILE_EXTENSION.replace(
                 'get_pyramid_dataset', 'get-pyramid-dataset').replace(
                 'get_datasets_by_scale', 'get-dataset-by-scale').split('_')
-            PARAMETERS.LBP_METHOD = properties[0]
-            PARAMETERS.METHOD = properties[1].replace(
-                'get-pyramid-dataset', 'get_pyramid_dataset').replace('get-dataset-by-scale', 'get_datasets_by_scale')
-            PARAMETERS.INTERPOLATION_ALGORITHM = properties[2]
-            PARAMETERS.BALANCE = properties[3].replace('balance-', '') == 'True'
-            PARAMETERS.N_SCALES = int(properties[4].replace('scales-', ''))
-            PARAMETERS.X2SCALE = properties[5].replace('x2-', '') == 'True'
-            PARAMETERS.GRAY_INTENSITY = properties[6].replace('gray-intensity-', '') == 'True'
-            metrics = metrics.append(pd.DataFrame(
-                (
-                    PARAMETERS.LBP_METHOD,
-                    PARAMETERS.METHOD,
-                    PARAMETERS.INTERPOLATION_ALGORITHM,
-                    PARAMETERS.BALANCE,
-                    PARAMETERS.N_SCALES,
-                    PARAMETERS.X2SCALE,
-                    PARAMETERS.GRAY_INTENSITY
-                ) + main(),
-                index=[
-                    'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',
-                    'Accuracy', 'F1 score', 'tn', 'fp', 'fn', 'tp'
-                ]
-            ).T, ignore_index=True)
+            if len(properties) < 7:
+                PARAMETERS.LBP_METHOD = properties[0]
+                PARAMETERS.METHOD = properties[1].replace(
+                    'get-pyramid-dataset', 'get_pyramid_dataset').replace('get-dataset-by-scale', 'get_datasets_by_scale')
+                PARAMETERS.INTERPOLATION_ALGORITHM = properties[2]
+                PARAMETERS.BALANCE = properties[3].replace('balance-', '') == 'True'
+                PARAMETERS.N_SCALES = int(properties[4].replace('scales-', ''))
+                PARAMETERS.X2SCALE = properties[5].replace('x2-', '') == 'True'
+                PARAMETERS.GRAY_INTENSITY = properties[6].replace('gray-intensity-', '') == 'True'
+                metrics = metrics.append(pd.DataFrame(
+                    (
+                        PARAMETERS.LBP_METHOD,
+                        PARAMETERS.METHOD,
+                        PARAMETERS.INTERPOLATION_ALGORITHM,
+                        PARAMETERS.BALANCE,
+                        PARAMETERS.N_SCALES,
+                        PARAMETERS.X2SCALE,
+                        PARAMETERS.GRAY_INTENSITY
+                    ) + main(),
+                    index=[
+                        'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',
+                        'Accuracy', 'F1 score', 'tn', 'fp', 'fn', 'tp'
+                    ]
+                ).T, ignore_index=True)
         metrics.to_csv(f"{parent_path}/Results/metrics.csv")

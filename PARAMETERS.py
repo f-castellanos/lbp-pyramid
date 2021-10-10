@@ -62,6 +62,10 @@ Whether to add a scale with x2 resolution.
 """
 X2SCALE = False
 
+"""
+"""
+ENCODING = 'categorical'
+
 # Other parameters
 PLOT = False
 PLOT_LBP_LABEL = False
@@ -70,4 +74,7 @@ HEIGHT = 608
 WIDTH = 576
 FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
                  f"_balance-{BALANCE}_scales-{N_SCALES}_x2-{X2SCALE}" \
-                 f"_gray-intensity-{GRAY_INTENSITY}"
+                 f"_gray-intensity-{GRAY_INTENSITY}_{ENCODING}"
+# FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
+#                  f"_balance-{BALANCE}_scales-{N_SCALES}_x2-{X2SCALE}" \
+#                  f"_gray-intensity-{GRAY_INTENSITY}"

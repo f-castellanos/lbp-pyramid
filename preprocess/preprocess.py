@@ -327,6 +327,8 @@ class Preprocess:
                 ),
                 axis=1
             )
+            # Binning
+            lbp_matrix[:, 0] = np.round(lbp_matrix[:, 0] / 25)
         lbp_matrix, _ = self.remove_mask_data(lbp_matrix, mask, remove_borders=True)
         scale_names = ['1:0.5', '1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][
                       int(not PARAMETERS.X2SCALE):PARAMETERS.N_SCALES+int(not PARAMETERS.X2SCALE)]
@@ -347,24 +349,42 @@ class Preprocess:
 
             if PARAMETERS.GRAY_INTENSITY:
                 df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names + ['label'], dtype='uint8')
-                df = pd.concat(
-                    (df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
-                    axis=1
-                )
+                if PARAMETERS.ENCODING == 'one-hot':
+                    df = pd.concat(
+                        (df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
+                        axis=1
+                    )
+                elif PARAMETERS.ENCODING == 'categorical':
+                    for col in df.iloc[:, 1:-1].columns:
+                        df[col] = df[col].astype('category')
             else:
                 df = pd.DataFrame(lbp_matrix, columns=scale_names + ['label'], dtype='uint8')
-                df = pd.concat(
-                    (self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
-                    axis=1
-                )
+                if PARAMETERS.ENCODING == 'one-hot':
+                    df = pd.concat(
+                        (self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
+                        axis=1
+                    )
+                elif PARAMETERS.ENCODING == 'categorical':
+                    for col in df.iloc[:, :-1].columns:
+                        df[col] = df[col].astype('category')
         else:
-            df = self.one_hot_encode(
-                pd.DataFrame(lbp_matrix, columns=scale_names, dtype='uint8')
-            )
             if PARAMETERS.GRAY_INTENSITY:
-                df = pd.concat((df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1].copy())), axis=1)
+                df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names, dtype='uint8')
+                if PARAMETERS.ENCODING == 'one-hot':
+                    df = pd.concat(
+                        (df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:].copy())),
+                        axis=1
+                    )
+                elif PARAMETERS.ENCODING == 'categorical':
+                    for col in df.iloc[:, 1:-1].columns:
+                        df[col] = df[col].astype('category')
             else:
-                df = pd.concat((self.one_hot_encode(df.iloc[:, 1].copy())), axis=1)
+                df = pd.DataFrame(lbp_matrix, columns=scale_names, dtype='uint8')
+                if PARAMETERS.ENCODING == 'one-hot':
+                    df = self.one_hot_encode(df.iloc[:, 1:-1].copy())
+                elif PARAMETERS.ENCODING == 'categorical':
+                    for col in df.iloc[:, :-1].columns:
+                        df[col] = df[col].astype('category')
         # if df.shape[1] < 1:
         #     a = 0
         return df
