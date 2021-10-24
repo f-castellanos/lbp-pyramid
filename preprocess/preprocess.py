@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from sklearn.preprocessing import OneHotEncoder
+from joblib import Parallel, delayed, parallel_backend
 
 import PARAMETERS
 from .lbp import lbp
@@ -18,10 +19,9 @@ class ParameterError(Exception):
 
 
 VALID_PARAMETERS = {
-    # 'LBP_METHOD': ['riu2'],
-    'LBP_METHOD': ['riu2', 'default', 'riu'],
-    # 'METHOD': ['get_pyramid_dataset'],
-    'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
+    'LBP_METHOD': ['default', 'riu', 'riu2'],
+    'METHOD': ['get_pyramid_dataset'],
+    # 'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
     'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
     'BALANCE': [False, True],
     'N_SCALES': list(range(3, 7)),
@@ -36,18 +36,72 @@ PARENT_PATH = str(Path(os.path.dirname(os.path.abspath(__file__))).parent.parent
 class Preprocess:
     def __init__(self, height, width, balance=False, lbp_radius=1,
                  lbp_method='default', mask_threshold=100, label_threshold=30):
-        self.height = height * 2 if PARAMETERS.X2SCALE else height
-        self.width = width * 2 if PARAMETERS.X2SCALE else width
+        # self.height = height * 2 if PARAMETERS.X2SCALE else height
+        # self.width = width * 2 if PARAMETERS.X2SCALE else width
+        self.height = height
+        self.width = width
         self.balance = balance
-        self.original_height = 584 * 2 if PARAMETERS.X2SCALE else height
-        self.original_width = 565 * 2 if PARAMETERS.X2SCALE else width
+        # self.original_height = 584 * 2 if PARAMETERS.X2SCALE else height
+        # self.original_width = 565 * 2 if PARAMETERS.X2SCALE else width
+        self.original_height = 584
+        self.original_width = 565
         self.mask_threshold = mask_threshold
         self.label_threshold = label_threshold
         self.lbp_radius = lbp_radius
         self.lbp_method = lbp_method
-        self.path = None
-        self.scale = None
+        # self.path = None
+        # self.scale = None
         self.parameters_verification()
+        self.training_path = None
+        self.images_path = None
+        self.masks_path = None
+        self.preprocessed_path = None
+
+    def compute_preprocessing(self, filenames, mask_filenames, main_path):
+        self.training_path = main_path
+        self.images_path = f"{self.training_path}images"
+        self.masks_path = f"{self.training_path}mask"
+        self.preprocessed_path = f"{self.training_path}preprocessed"
+        # for algorithm in VALID_PARAMETERS['INTERPOLATION_ALGORITHM']:
+        with parallel_backend('multiprocessing', n_jobs=PARAMETERS.N_JOBS):
+            _ = Parallel()(
+                delayed(self.compute_for_interpolation_algorithm)(algorithm, filenames, mask_filenames)
+                for algorithm in VALID_PARAMETERS['INTERPOLATION_ALGORITHM']
+            )
+        # self.compute_for_interpolation_algorithm(algorithm, filenames, mask_filenames)
+
+    def compute_for_interpolation_algorithm(self, algorithm, filenames, mask_filenames):
+        # PARAMETERS.INTERPOLATION_ALGORITHM = algorithm
+        algorithm_path = f"{self.preprocessed_path}/{algorithm}/original"
+        for filename, mask_filename in zip(filenames, mask_filenames):
+            if len(list(Path(algorithm_path).glob(f"{filename.split('.')[0]}*"))) == 7:
+                continue
+            img = Preprocess.read_img(f"{self.images_path}/{filename}")
+            img, mask = self.filter_by_mask(img, f"{self.masks_path}/{mask_filename}")
+            img = Preprocess.img_processing(img, PARAMETERS.PLOT)
+            img = self.rescale_add_borders(img)
+            for i in float(2) ** np.arange(-1, 6):
+                img_resized = Preprocess.rescale(
+                    img.copy(), (self.width // i, self.height // i), algorithm=algorithm)
+                im = Image.fromarray(img_resized)
+                im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
+        self.compute_lbp(algorithm)
+
+    def compute_lbp(self, algorithm):
+        # for algorithm in VALID_PARAMETERS['INTERPOLATION_ALGORITHM']:
+        algorithm_path = f"{self.preprocessed_path}/{algorithm}"
+        original_path = f"{algorithm_path}/original"
+        filenames = list(Path(original_path).glob("*"))
+        for lbp_operator in VALID_PARAMETERS['LBP_METHOD']:
+            lbp_path = f"{algorithm_path}/lbp/{lbp_operator}"
+            for filename in filenames:
+                filename = str(filename)
+                new_filename = filename.split('/')[-1].replace('.jpeg', '.pkl')
+                if not os.path.isfile(f"{lbp_path}/{new_filename}"):
+                    img = Preprocess.read_img(filename)
+                    img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT)
+                    with open(f"{lbp_path}/{new_filename}", 'wb') as f:
+                        pickle.dump(img_lbp, f)
 
     @staticmethod
     def parameters_verification():
@@ -55,25 +109,31 @@ class Preprocess:
         Verification of the given execution parameters
         :return: None
         """
-        for k, v in VALID_PARAMETERS.items():
-            if getattr(PARAMETERS, k) not in v:
-                raise ParameterError(f"{PARAMETERS.INTERPOLATION_ALGORITHM} is not correctly defined")
+        # print(VALID_PARAMETERS)
+        if 'SKIP_VALIDATION' not in os.environ or os.environ['SKIP_VALIDATION'] != 'True':
+            for k, v in VALID_PARAMETERS.items():
+                # print(getattr(PARAMETERS, k))
+                # print(v)
+                if getattr(PARAMETERS, k) not in v:
+                    raise ParameterError(f"{getattr(PARAMETERS, k)} is not correctly defined")
 
-    def read_img(self, path):
+    @staticmethod
+    def read_img(path, x2_enabled=True):
         """
         Reads a image given the path
+        :param x2_enabled: Enables x2 rescaling
         :param path: Image path
         :return: Numpy array containing the information of the image
         """
         img = np.asarray(Image.open(path).convert('L'))
-        if PARAMETERS.X2SCALE:
-            img = self.rescale(
-                img.copy(), (img.shape[1] * 2, img.shape[0] * 2)
-            )
+        # if PARAMETERS.X2SCALE and x2_enabled:
+        #     img = self.rescale(
+        #         img.copy(), (img.shape[1] * 2, img.shape[0] * 2)
+        #     )
         return img.copy()
 
     @staticmethod
-    def rescale(img, dim):
+    def rescale(img, dim, algorithm=None):
         """
         Resizes the image to the given dimensions.
         PIL.Image.LANCZOS – Calculate the output pixel value using a high-quality Lanczos filter on
@@ -89,9 +149,11 @@ class Preprocess:
             'bicubic': Image.BICUBIC
         }
         im = Image.fromarray(np.uint8(img))
+        if algorithm is None:
+            algorithm = PARAMETERS.INTERPOLATION_ALGORITHM
         if img.shape != dim:
             return np.asarray(
-                im.resize((int(dim[0]), int(dim[1])), resample=resample_map[PARAMETERS.INTERPOLATION_ALGORITHM]))
+                im.resize((int(dim[0]), int(dim[1])), resample=resample_map[algorithm]))
         else:
             return img
 
@@ -119,6 +181,44 @@ class Preprocess:
         img = img[np.repeat(np.arange(img.shape[0]), n_times), :]
         img = img[:, np.repeat(np.arange(img.shape[1]), n_times)]
         return img
+
+    @staticmethod
+    def undo_repeat_pixels(img):
+        """
+
+        :param img:
+        :return:
+
+        Example:
+
+        img = array([[ 0,  1,  2,  3,  4,  5],
+                     [ 6,  7,  8,  9, 10, 11],
+                     [12, 13, 14, 15, 16, 17],
+                     [18, 19, 20, 21, 22, 23]])
+
+        i_indexes = array([[0, 0, 1, 1, 2, 2],
+                           [0, 0, 1, 1, 2, 2],
+                           [3, 3, 4, 4, 5, 5],
+                           [3, 3, 4, 4, 5, 5]])
+
+        j_indexes = array([[0, 1, 0, 1, 0, 1],
+                           [2, 3, 2, 3, 2, 3],
+                           [0, 1, 0, 1, 0, 1],
+                           [2, 3, 2, 3, 2, 3]])
+
+        Then, new columns for pixel 0 are (0, 1, 6, 7)
+        """
+        i_indexes = Preprocess.repeat_pixels(
+            np.arange(img.shape[0]//2*img.shape[1]//2).reshape((img.shape[0]//2, img.shape[1]//2)), 2)
+
+        x = np.array([[0, 1], [2, 3]])
+        j_indexes = np.tile(x, (img.shape[0]//2, img.shape[1]//2))
+
+        reshaped_img = np.zeros((img.shape[0]*img.shape[1] // 4, 4), dtype='uint8')
+        for v, i, j in zip(img.ravel(), i_indexes.ravel(), j_indexes.ravel()):
+            reshaped_img[i, j] = v
+
+        return reshaped_img
 
     @staticmethod
     def gray_to_array(img):
@@ -159,25 +259,29 @@ class Preprocess:
         return img, mask
 
     #  LBP
-    def apply_lbp(self, img, plot=False):
+    def apply_lbp(self, img, plot=False, method=None, pre_loaded=False):
         """
         Returns the LBP values for the given image
         :param img: Numpy array containing the information of the image.
         :param plot: Boolean to determine whether to plot the results.
         :return: Numpy array containing the information of the LBP image.
         """
-        scale = self.scale/2 if PARAMETERS.X2SCALE else self.scale
-        try:
-            if plot:
-                raise FileNotFoundError
-            with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
-                      f'_{scale}_{PARAMETERS.LBP_METHOD}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'rb') as f:
-                lbp_img = pickle.load(f)
-        except FileNotFoundError:
-            lbp_img = lbp(img, r=self.lbp_radius, method=self.lbp_method, plot=plot)
-            with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
-                      f'_{scale}_{PARAMETERS.LBP_METHOD}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'wb') as f:
-                pickle.dump(lbp_img, f)
+        # scale = self.scale/2 if PARAMETERS.X2SCALE else self.scale
+        if method is None:
+            method = self.lbp_method
+        # try:
+        #     if plot or not pre_loaded:
+        #         raise FileNotFoundError
+            # with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
+            #           f'_{self.scale}_{method}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'rb') as f:
+            #     lbp_img = pickle.load(f)
+        # except FileNotFoundError:
+        #     lbp_img = lbp(img, r=self.lbp_radius, method=method, plot=plot)
+            # if pre_loaded:
+            #     with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
+            #               f'_{self.scale}_{method}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'wb') as f:
+            #         pickle.dump(lbp_img, f)
+        lbp_img = lbp(img, r=self.lbp_radius, method=method, plot=plot)
         return lbp_img
 
     # Image transformations
@@ -245,9 +349,11 @@ class Preprocess:
 
     # Gold Standard
     def get_label(self, path):
-        img = self.read_img(path)
+        img = self.read_img(path, x2_enabled=False)
         img[img < self.label_threshold] = 0
         img[img >= self.label_threshold] = 1
+        # if PARAMETERS.X2SCALE:
+        #     img = Preprocess.repeat_pixels(img, 2)
         return img
 
     def plot_preprocess_with_label(self, img, label, mask, i=1):
@@ -307,19 +413,46 @@ class Preprocess:
         :param plot: Boolean to determine whether to plot the results
         :return: DataFrame of the features calculated from the image
         """
-        self.path = path
-        img = self.read_img(path)
-        img, mask = self.filter_by_mask(img, mask_path)
-        img = Preprocess.img_processing(img, plot)
-        img = self.rescale_add_borders(img)
-        lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES))
-        for i in 2 ** np.arange(PARAMETERS.N_SCALES):
-            img_resized = Preprocess.rescale(img.copy(), (self.width // i, self.height // i))
-            self.scale = i
-            img_lbp = self.apply_lbp(img_resized, plot=plot)
+        # self.path = path
+        filename = path.split('/')[-1]
+        path = f"{self.preprocessed_path}/{PARAMETERS.INTERPOLATION_ALGORITHM}/lbp/{PARAMETERS.LBP_METHOD}"
+        # img = self.read_img(path)
+        # img, mask = self.filter_by_mask(img, mask_path)
+        # img = Preprocess.img_processing(img, plot)
+        # img = self.rescale_add_borders(img)
+        scale_names = ['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][:(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE))]
+        if PARAMETERS.X2SCALE:
+            scale_names += ['2:1_1', '2:1_2', '2:1_3', '2:1_4']
+            lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES + 3), dtype='uint8')
+            # img_resized = Preprocess.rescale(img.copy(), (self.width // 0.5, self.height // 0.5))
+            # self.scale = 0.5
+            # img_lbp = self.apply_lbp(img_resized, plot=plot)
+            with open(f"{path}/{filename.split('.tif')[0]}_0.5.pkl", 'rb') as f:
+                img_lbp = pickle.load(f)
+            # img_lbp = self.read_img(f"{path}/{filename.split('.tif')[0]}_0.5.pkl")
+            lbp_matrix[:, -4:] = Preprocess.undo_repeat_pixels(img_lbp)
+        else:
+            lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES), dtype='uint8')
+        '''
+        TODO: si es 1:0.5 -> hacer operación inversa a repeat_prixels (matrix 4x2x2) para generar 4 columnas en la
+        BBDD porque sino se estarían haciendo 4 predicciones para un mismo pixel (y así se tiene más info para el
+        cálculo individual de cada píxel)
+        '''
+        for i in 2 ** np.arange(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE)):
+            # img_resized = Preprocess.rescale(img.copy(), (self.width // i, self.height // i))
+            # self.scale = i
+            # img_lbp = self.apply_lbp(img_resized, plot=plot)
+            # img_lbp = Preprocess.repeat_pixels(img_lbp, i)
+            with open(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl", 'rb') as f:
+                img_lbp = pickle.load(f)
+            # img_lbp = self.read_img(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl")
             img_lbp = Preprocess.repeat_pixels(img_lbp, i)
             lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()
         #  Original image
+        img_path = f"{self.preprocessed_path}/{PARAMETERS.INTERPOLATION_ALGORITHM}/original/" \
+                   f"{filename.split('.tif')[0]}_1.0.jpeg"
+        img = Preprocess.read_img(img_path)
+        mask = self.read_img(mask_path)
         if PARAMETERS.GRAY_INTENSITY:
             lbp_matrix = np.concatenate((
                     img.copy().ravel().reshape(-1, 1),
@@ -330,8 +463,8 @@ class Preprocess:
             # Binning
             lbp_matrix[:, 0] = np.round(lbp_matrix[:, 0] / 25)
         lbp_matrix, _ = self.remove_mask_data(lbp_matrix, mask, remove_borders=True)
-        scale_names = ['1:0.5', '1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][
-                      int(not PARAMETERS.X2SCALE):PARAMETERS.N_SCALES+int(not PARAMETERS.X2SCALE)]
+        # scale_names = ['1:0.5', '1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][
+        #               int(not PARAMETERS.X2SCALE):PARAMETERS.N_SCALES+int(not PARAMETERS.X2SCALE)]
         if label_path is not None:
             label = self.get_label(label_path).reshape(-1, 1)
             label, _ = self.remove_mask_data(label, mask)
@@ -355,13 +488,13 @@ class Preprocess:
                         axis=1
                     )
                 elif PARAMETERS.ENCODING == 'categorical':
-                    for col in df.iloc[:, 1:-1].columns:
+                    for col in df.iloc[:, :-1].columns:
                         df[col] = df[col].astype('category')
             else:
                 df = pd.DataFrame(lbp_matrix, columns=scale_names + ['label'], dtype='uint8')
                 if PARAMETERS.ENCODING == 'one-hot':
                     df = pd.concat(
-                        (self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
+                        (self.one_hot_encode(df.iloc[:, :-1].copy()), df.loc[:, 'label']),
                         axis=1
                     )
                 elif PARAMETERS.ENCODING == 'categorical':
@@ -376,7 +509,7 @@ class Preprocess:
                         axis=1
                     )
                 elif PARAMETERS.ENCODING == 'categorical':
-                    for col in df.iloc[:, 1:-1].columns:
+                    for col in df.iloc[:, :-1].columns:
                         df[col] = df[col].astype('category')
             else:
                 df = pd.DataFrame(lbp_matrix, columns=scale_names, dtype='uint8')
@@ -392,7 +525,7 @@ class Preprocess:
     # Multiple models dataset constructor
     def get_dataset_by_scale(self, img, mask, label, plot, train_set, i):
         img_resized = Preprocess.rescale(img, (self.width // i, self.height // i))
-        self.scale = i
+        # self.scale = i
         img_lbp = self.apply_lbp(img_resized, plot=plot)
         if label is not None:
             label_resized = Preprocess.rescale(label.copy(), (self.width // i, self.height // i))
@@ -431,7 +564,7 @@ class Preprocess:
             )
 
     def get_datasets_by_scale(self, path, label_path=None, mask_path=None, plot=False, train_set=True):
-        self.path = path
+        # self.path = path
         img = self.read_img(path)
         img, mask = self.filter_by_mask(img, mask_path)
         img = Preprocess.img_processing(img, plot)

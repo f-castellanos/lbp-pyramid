@@ -22,12 +22,14 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="Final parameterized version">
+    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="Fix one hot encode">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PARAMETERS.py" beforeDir="false" afterPath="$PROJECT_DIR$/PARAMETERS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Untitled.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/pixel_neighborhood.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/create_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_db.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/preprocess-2.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess-2.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metrics-comparison.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/metrics-comparison.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pixel_neighborhood.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/pixel_neighborhood.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/lbp.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/lbp.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -71,7 +73,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -454,7 +456,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632648808660</updated>
     </task>
-    <option name="localTasksCounter" value="39" />
+    <task id="LOCAL-00039" summary="Fix one hot encode">
+      <created>1633853350969</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1633853350969</updated>
+    </task>
+    <option name="localTasksCounter" value="40" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -492,15 +501,21 @@
     <MESSAGE value="metrics comparison" />
     <MESSAGE value="parameters configuration file" />
     <MESSAGE value="Final parameterized version" />
-    <option name="LAST_COMMIT_MESSAGE" value="Final parameterized version" />
+    <MESSAGE value="Fix one hot encode" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix one hot encode" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/preprocess/preprocess.py</url>
-          <line>331</line>
-          <option name="timeStamp" value="21" />
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>231</line>
+          <option name="timeStamp" value="40" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/preprocess/lbp.py</url>
+          <line>90</line>
+          <option name="timeStamp" value="50" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

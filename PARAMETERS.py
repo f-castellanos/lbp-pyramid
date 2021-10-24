@@ -6,7 +6,7 @@ Defines the LBP algorithm version to be used.
 · riu: Rotation invariant version [https://www.researchgate.net/publication/221303862_Gray_Scale_and_Rotation_Invariant_Texture_Classification_with_Local_Binary_Patterns].
 · riu2: Improved rotation invariance with uniform patterns [https://www.researchgate.net/publication/221303862_Gray_Scale_and_Rotation_Invariant_Texture_Classification_with_Local_Binary_Patterns].
 """  # noqa
-LBP_METHOD = 'riu2'
+LBP_METHOD = 'default'
 
 """
 METHOD
@@ -25,7 +25,7 @@ Defines the interpolation algorithm to be used in the image rescaling process.
 · bicubic: Cubic interpolation on all pixels that may contribute to the output value.
 · lanczos: Calculate the output pixel value using a high-quality Lanczos filter.
 """
-INTERPOLATION_ALGORITHM = 'bicubic'
+INTERPOLATION_ALGORITHM = 'lanczos'
 
 """
 BALANCE    <- ONLY for get_pyramid_dataset
@@ -42,7 +42,7 @@ N_SCALES
 Number of scales to use.
 1 - 6
 """
-N_SCALES = 6
+N_SCALES = 5
 
 """
 GRAY_INTENSITY    <- ONLY for get_pyramid_dataset
@@ -60,7 +60,7 @@ Whether to add a scale with x2 resolution.
 · True
 · False
 """
-X2SCALE = False
+X2SCALE = True
 
 """
 """
@@ -69,12 +69,12 @@ ENCODING = 'categorical'
 # Other parameters
 PLOT = False
 PLOT_LBP_LABEL = False
-N_JOBS = 1
+N_JOBS = 3
 HEIGHT = 608
 WIDTH = 576
 FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
                  f"_balance-{BALANCE}_scales-{N_SCALES}_x2-{X2SCALE}" \
-                 f"_gray-intensity-{GRAY_INTENSITY}_{ENCODING}"
+                 f"_gray-intensity-{GRAY_INTENSITY}"
 # FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
 #                  f"_balance-{BALANCE}_scales-{N_SCALES}_x2-{X2SCALE}" \
 #                  f"_gray-intensity-{GRAY_INTENSITY}"

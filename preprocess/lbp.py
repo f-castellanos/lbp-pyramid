@@ -31,6 +31,13 @@ def roll_pattern(pattern, k):
 def lbp_pixel_calc(img, x, y, r, method):
     center = img[x, y]
     matrix = img[x - r:x + r + 1, y - r:y + r + 1]
+    """
+    matrix example:
+    ---------------
+    [[56 34 23],
+     [34 43 53],
+     [51 43 21]]
+    """
     if matrix.shape[0]*matrix.shape[1] != (r*2+1)**2:
         '''
         When there are no neighboring pixels for the given radius,
@@ -42,10 +49,48 @@ def lbp_pixel_calc(img, x, y, r, method):
         y += r
         matrix = img[x - r:x + r + 1, y - r:y + r + 1]
     arr = np.concatenate((matrix[0, 1:-1][::-1], matrix[:, 0], matrix[-1, 1:-1], matrix[0:, -1][::-1]))
+    """
+    arr example:
+    ------------
+    [23, 53, 21, 43, 51, 34, 56, 34]
+    """
     arr = np.where(arr < center, 1, 0)
+    """
+    arr example:
+    ------------
+    [1, 0, 1, 0, 0, 1, 0, 1]
+    """
     if method == 'riu':
-        n_arr = np.array(list(arr)*len(arr)).reshape(len(arr), -1)
-        return min(np.array([roll_pattern(v, i) for i, v in enumerate(n_arr)]))
+        # n_arr = np.array(list(arr)*len(arr)).reshape(len(arr), -1)
+        # n_arr = np.repeat(arr.reshape(1, -1), len(arr), axis=0)
+        # for
+        r = np.arange(len(arr))  # Number of times each row is rolled
+        """
+        Advanced indexing for rotation
+        https://stackoverflow.com/questions/20360675/roll-rows-of-a-matrix-independently
+        """
+        arr_mat = arr.reshape(1, -1)
+        rows, column_indices = np.ogrid[:arr_mat.shape[0], :arr_mat.shape[1]]
+        r[r < 0] += arr_mat.shape[1]
+        column_indices = column_indices - r[:, np.newaxis]
+        rolled_arr = arr_mat[rows, column_indices]
+        """
+        rolled_arr example:
+        ------------------
+        array([[1, 0, 1, 0, 0, 1, 0, 1],
+               [1, 1, 0, 1, 0, 0, 1, 0],
+               [0, 1, 1, 0, 1, 0, 0, 1],
+               [1, 0, 1, 1, 0, 1, 0, 0],
+               [0, 1, 0, 1, 1, 0, 1, 0],
+               [0, 0, 1, 0, 1, 1, 0, 1],
+               [1, 0, 0, 1, 0, 1, 1, 0],
+               [0, 1, 0, 0, 1, 0, 1, 1]])
+        """
+        decimal_conversion = np.repeat((2 ** np.arange(len(arr))[::-1]).reshape(1, -1), len(arr), axis=0)
+        # if (decimal_conversion * rolled_arr).sum(axis=1).min() in [2, 4, 6, 8, 10, 12, 14]:
+        #     a = 0
+        return (decimal_conversion * rolled_arr).sum(axis=1).min()
+        # return min(np.array([roll_pattern(v, i) for i, v in enumerate(n_arr)]))
     elif method == 'riu2':
         u = len(list(itertools.groupby(np.append(arr, arr[0]), lambda bit: bit == 0))) - 1
         if u > 2:

@@ -53,6 +53,8 @@ def main(single_exec=False):
     labels_path = path + '1st_manual/'
     labels = sorted(os.listdir(labels_path))
 
+    preprocess.compute_preprocessing(images, masks, path)
+
     if single_exec:
         _ = img_preprocess(preprocess, 0, images[0], masks[0], labels[0], path)
     else:
