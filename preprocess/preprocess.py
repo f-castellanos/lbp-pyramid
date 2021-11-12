@@ -24,7 +24,7 @@ VALID_PARAMETERS = {
     # 'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
     'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
     'BALANCE': [False, True],
-    'N_SCALES': list(range(3, 7)),
+    'N_SCALES': list(range(1, 7)),
     'GRAY_INTENSITY': [True, False],
     'X2SCALE': [False, True],
 }
@@ -56,12 +56,17 @@ class Preprocess:
         self.images_path = None
         self.masks_path = None
         self.preprocessed_path = None
+        self.original_preprocessed_path = None
 
     def compute_preprocessing(self, filenames, mask_filenames, main_path):
         self.training_path = main_path
         self.images_path = f"{self.training_path}images"
         self.masks_path = f"{self.training_path}mask"
-        self.preprocessed_path = f"{self.training_path}preprocessed"
+        if PARAMETERS.CONVOLUTION is None:
+            self.preprocessed_path = f"{self.training_path}preprocessed"
+        else:
+            self.preprocessed_path = f"{self.training_path}preprocessed_convolutions/{PARAMETERS.CONVOLUTION}"
+            self.original_preprocessed_path = f"{self.training_path}preprocessed"
         # for algorithm in VALID_PARAMETERS['INTERPOLATION_ALGORITHM']:
         with parallel_backend('multiprocessing', n_jobs=PARAMETERS.N_JOBS):
             _ = Parallel()(
@@ -73,18 +78,30 @@ class Preprocess:
     def compute_for_interpolation_algorithm(self, algorithm, filenames, mask_filenames):
         # PARAMETERS.INTERPOLATION_ALGORITHM = algorithm
         algorithm_path = f"{self.preprocessed_path}/{algorithm}/original"
+        if not os.path.exists(algorithm_path):
+            os.makedirs(algorithm_path)
         for filename, mask_filename in zip(filenames, mask_filenames):
             if len(list(Path(algorithm_path).glob(f"{filename.split('.')[0]}*"))) == 7:
                 continue
-            img = Preprocess.read_img(f"{self.images_path}/{filename}")
-            img, mask = self.filter_by_mask(img, f"{self.masks_path}/{mask_filename}")
-            img = Preprocess.img_processing(img, PARAMETERS.PLOT)
-            img = self.rescale_add_borders(img)
-            for i in float(2) ** np.arange(-1, 6):
-                img_resized = Preprocess.rescale(
-                    img.copy(), (self.width // i, self.height // i), algorithm=algorithm)
-                im = Image.fromarray(img_resized)
-                im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
+            if PARAMETERS.CONVOLUTION is None:
+                img = Preprocess.read_img(f"{self.images_path}/{filename}")
+                img, mask = self.filter_by_mask(img, f"{self.masks_path}/{mask_filename}")
+                img = Preprocess.img_processing(img, PARAMETERS.PLOT)
+                img = self.rescale_add_borders(img)
+                for i in float(2) ** np.arange(-1, 6):
+                    img_resized = Preprocess.rescale(
+                        img.copy(), (self.width // i, self.height // i), algorithm=algorithm)
+                    im = Image.fromarray(img_resized)
+                    im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
+            else:
+                for i in float(2) ** np.arange(-1, 6):
+                    img = Preprocess.read_img(f"{self.preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
+                    kernel_len = int(len(PARAMETERS.CONVOLUTION) ** 0.5)
+                    kernel = np.array(list(PARAMETERS.CONVOLUTION)).reshape(kernel_len, kernel_len).astype(np.int8)
+                    img = cv2.filter2D(img, -1, kernel)
+                    im = Image.fromarray(img)
+                    im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
+
         self.compute_lbp(algorithm)
 
     def compute_lbp(self, algorithm):

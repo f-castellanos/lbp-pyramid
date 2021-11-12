@@ -45,11 +45,11 @@ import PARAMETERS
 
 class LGBMClassifierColNames(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
-        x.columns = [col.replace(':', '') for col in list(x.columns)]
+        x.columns = [str(col).replace(':', '') for col in list(x.columns)]
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
-        x.columns = [col.replace(':', '') for col in list(x.columns)]
+        x.columns = [str(col).replace(':', '') for col in list(x.columns)]
         return super().predict(x, *args, **kwargs)
 
 
@@ -120,7 +120,7 @@ def ensemble_prediction(classifiers, dfs_test):
     return y_predictions, y_actual
 
 
-def main(lgb=False, plot_once=False):
+def load_datasets_for_lbp_operator(discard_columns=False):
     # Database unzip
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
@@ -130,8 +130,42 @@ def main(lgb=False, plot_once=False):
     with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
         zip_ref.extractall(f'{parent_path}/DB/')
 
+    df_train_temp = pd.read_pickle(f'{train_file_name}.pkl')
+    os.remove(f'{train_file_name}.pkl')
+    df_test_temp = pd.read_pickle(f'{test_file_name}.pkl')
+    os.remove(f'{test_file_name}.pkl')
+    y_train_temp = df_train_temp.loc[:, 'label']
+    y_test_temp = df_test_temp.loc[:, 'label']
+    df_train_temp.drop(columns=['label'], inplace=True)
+    df_test_temp.drop(columns=['label'], inplace=True)
+
+    if discard_columns and PARAMETERS.GRAY_INTENSITY:
+        df_train_temp.drop(columns=['Original'], inplace=True)
+        df_test_temp.drop(columns=['Original'], inplace=True)
+    df_train_temp.columns = list(
+        map(lambda x: f"{PARAMETERS.LBP_METHOD}_{x}" if x != 'Original' else x, df_train_temp.columns))
+    df_test_temp.columns = list(
+        map(lambda x: f"{PARAMETERS.LBP_METHOD}_{x}" if x != 'Original' else x, df_test_temp.columns))
+
+    for col in df_train_temp.columns:
+        df_train_temp[col] = df_train_temp[col].astype('category')
+        df_test_temp[col] = df_test_temp[col].astype('category')
+
+    return df_train_temp, df_test_temp, y_train_temp, y_test_temp
+
+
+def main(lgb=False, plot_once=False, extra_features=None, all_lbp=False):
+    parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
+        # Database unzip
+        train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
+        with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
+            zip_ref.extractall(f'{parent_path}/DB/')
+        test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
+        with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
+            zip_ref.extractall(f'{parent_path}/DB/')
+
         with open(f'{train_file_name}.pkl', 'rb') as f:
             df_train_list = pickle.load(f)
         os.remove(f'{train_file_name}.pkl')
@@ -139,20 +173,31 @@ def main(lgb=False, plot_once=False):
         with open(f'{test_file_name}.pkl', 'rb') as f:
             df_test_list = pickle.load(f)
         os.remove(f'{test_file_name}.pkl')
+
         y_predicted_test_list = [ensemble_prediction(clf_list, dfs_test) for dfs_test in df_test_list]
         y_predicted = np.concatenate([y_predicted_test_pic[0] for y_predicted_test_pic in y_predicted_test_list])
         y_predicted = np.where(y_predicted > 0.5, 1, 0)
         y_test = np.concatenate([y_predicted_test_pic[1] for y_predicted_test_pic in y_predicted_test_list])
 
     else:
-        df_train = pd.read_pickle(f'{train_file_name}.pkl')
-        os.remove(f'{train_file_name}.pkl')
-        df_test = pd.read_pickle(f'{test_file_name}.pkl')
-        os.remove(f'{test_file_name}.pkl')
-        y_train = df_train.loc[:, 'label']
-        y_test = df_test.loc[:, 'label']
-        df_train.drop(columns=['label'], inplace=True)
-        df_test.drop(columns=['label'], inplace=True)
+        df_train = None
+        df_test = None
+        if all_lbp:
+            for i, lbp_operator in enumerate(['default', 'riu', 'riu2']):
+                PARAMETERS.LBP_METHOD = lbp_operator
+                PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+                if i == 0:
+                    df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator()
+                else:
+                    temp_datasets = load_datasets_for_lbp_operator(discard_columns=True)
+                    df_train = pd.concat([df_train, temp_datasets[0]], axis=1)
+                    df_test = pd.concat([df_test, temp_datasets[1]], axis=1)
+        else:
+            df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator()
+
+        if extra_features is not None:
+            df_train = pd.concat([df_train, extra_features['train']], axis=1)
+            df_test = pd.concat([df_test, extra_features['test']], axis=1)
 
         if df_train.shape[1] > 0:
             clf = init_clf_and_fit(df_train, y_train, lgb)
@@ -179,12 +224,14 @@ def main(lgb=False, plot_once=False):
     if flag:
         acc = accuracy_score(y_test, y_predicted)
         f1 = f1_score(y_test, y_predicted)
+        mat = confusion_matrix(y_test, y_predicted).ravel()
         if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
             print('Accuracy score: ' + str(acc) + '\n')
             print('F1 score: ' + str(f1) + '\n')
             print('Confusion matrix:\n')
             print_confusion_matrix(y_test, y_predicted)
-        mat = confusion_matrix(y_test, y_predicted).ravel()
+            print(f'Sensivity: {int(mat[3]) / (int(mat[3]) + int(mat[2]))}')
+            print(f'Specificity: {int(mat[0]) / (int(mat[0]) + int(mat[1]))}')
         return round(acc, 3), round(f1, 3), int(mat[0]), int(mat[1]), int(mat[2]), int(mat[3])
     else:
         return -1, -1, -1, -1, -1, -1

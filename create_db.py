@@ -67,8 +67,15 @@ def main(single_exec=False):
             )
 
         # Train - Test dataframes
-        train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
-        test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
+        if PARAMETERS.CONVOLUTION is None:
+            train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
+            test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
+        else:
+            db_path = f"{parent_path}/DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}"
+            if not os.path.exists(db_path):
+                os.makedirs(db_path)
+            train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
+            test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
         if PARAMETERS.METHOD == 'get_datasets_by_scale':
             def train_set_extract(df_set, i):
                 df = pd.DataFrame()
@@ -121,7 +128,7 @@ if __name__ == '__main__':
                                             f"{PARAMETERS.INTERPOLATION_ALGORITHM}_balance-{PARAMETERS.BALANCE}_" \
                                             f"scales-{PARAMETERS.N_SCALES}_x2-{PARAMETERS.X2SCALE}" \
                                             f"_gray-intensity-{PARAMETERS.GRAY_INTENSITY}"
-            if j > 0:
+            if j > 0 and not (PARAMETERS.N_SCALES == 1 and PARAMETERS.X2SCALE):
                 main()
 
 # Saltados: 98, 100, 101, 102, 104, 105, 106, 107

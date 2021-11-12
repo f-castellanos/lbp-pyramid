@@ -60,14 +60,16 @@ Whether to add a scale with x2 resolution.
 · True
 · False
 """
-X2SCALE = True
+X2SCALE = False
 
 """
 """
 ENCODING = 'categorical'
 
+CONVOLUTION = None
+
 # Other parameters
-PLOT = False
+PLOT = True
 PLOT_LBP_LABEL = False
 N_JOBS = 3
 HEIGHT = 608
@@ -78,3 +80,9 @@ FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
 # FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
 #                  f"_balance-{BALANCE}_scales-{N_SCALES}_x2-{X2SCALE}" \
 #                  f"_gray-intensity-{GRAY_INTENSITY}"
+
+
+def update_file_extension(parameters):
+    return f"{parameters.LBP_METHOD}_{parameters.METHOD}_{parameters.INTERPOLATION_ALGORITHM}" \
+                 f"_balance-{parameters.BALANCE}_scales-{parameters.N_SCALES}_x2-{parameters.X2SCALE}" \
+                 f"_gray-intensity-{parameters.GRAY_INTENSITY}"
