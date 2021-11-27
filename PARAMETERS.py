@@ -69,9 +69,9 @@ ENCODING = 'categorical'
 CONVOLUTION = None
 
 # Other parameters
-PLOT = True
+PLOT = False
 PLOT_LBP_LABEL = False
-N_JOBS = 3
+N_JOBS = 1
 HEIGHT = 608
 WIDTH = 576
 FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \

@@ -1,6 +1,7 @@
 import os
-import pickle
+import _pickle as pickle
 from pathlib import Path
+import bz2
 
 import cv2
 import matplotlib.pyplot as plt
@@ -11,7 +12,9 @@ from sklearn.preprocessing import OneHotEncoder
 from joblib import Parallel, delayed, parallel_backend
 
 import PARAMETERS
-from .lbp import lbp
+from lbp_scikit import lbp
+# from lbp import lbp
+# from .lbp import lbp
 
 
 class ParameterError(Exception):
@@ -95,7 +98,7 @@ class Preprocess:
                     im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
             else:
                 for i in float(2) ** np.arange(-1, 6):
-                    img = Preprocess.read_img(f"{self.preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
+                    img = Preprocess.read_img(f"{self.original_preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
                     kernel_len = int(len(PARAMETERS.CONVOLUTION) ** 0.5)
                     kernel = np.array(list(PARAMETERS.CONVOLUTION)).reshape(kernel_len, kernel_len).astype(np.int8)
                     img = cv2.filter2D(img, -1, kernel)
@@ -111,13 +114,15 @@ class Preprocess:
         filenames = list(Path(original_path).glob("*"))
         for lbp_operator in VALID_PARAMETERS['LBP_METHOD']:
             lbp_path = f"{algorithm_path}/lbp/{lbp_operator}"
+            if not os.path.exists(lbp_path):
+                os.makedirs(lbp_path)
             for filename in filenames:
                 filename = str(filename)
                 new_filename = filename.split('/')[-1].replace('.jpeg', '.pkl')
                 if not os.path.isfile(f"{lbp_path}/{new_filename}"):
                     img = Preprocess.read_img(filename)
                     img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT)
-                    with open(f"{lbp_path}/{new_filename}", 'wb') as f:
+                    with bz2.BZ2File(f"{lbp_path}/{new_filename}", 'wb') as f:
                         pickle.dump(img_lbp, f)
 
     @staticmethod
@@ -444,7 +449,7 @@ class Preprocess:
             # img_resized = Preprocess.rescale(img.copy(), (self.width // 0.5, self.height // 0.5))
             # self.scale = 0.5
             # img_lbp = self.apply_lbp(img_resized, plot=plot)
-            with open(f"{path}/{filename.split('.tif')[0]}_0.5.pkl", 'rb') as f:
+            with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_0.5.pkl", 'rb') as f:
                 img_lbp = pickle.load(f)
             # img_lbp = self.read_img(f"{path}/{filename.split('.tif')[0]}_0.5.pkl")
             lbp_matrix[:, -4:] = Preprocess.undo_repeat_pixels(img_lbp)
@@ -456,13 +461,9 @@ class Preprocess:
         cálculo individual de cada píxel)
         '''
         for i in 2 ** np.arange(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE)):
-            # img_resized = Preprocess.rescale(img.copy(), (self.width // i, self.height // i))
-            # self.scale = i
-            # img_lbp = self.apply_lbp(img_resized, plot=plot)
-            # img_lbp = Preprocess.repeat_pixels(img_lbp, i)
-            with open(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl", 'rb') as f:
+            with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl", 'rb') as f:
+            # with open(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl", 'rb') as f:
                 img_lbp = pickle.load(f)
-            # img_lbp = self.read_img(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl")
             img_lbp = Preprocess.repeat_pixels(img_lbp, i)
             lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()
         #  Original image

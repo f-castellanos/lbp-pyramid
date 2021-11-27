@@ -6,10 +6,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
-from sklearn.naive_bayes import MultinomialNB, CategoricalNB
+from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.naive_bayes import CategoricalNB
 # from xgboost import XGBClassifier
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import f1_score, make_scorer
 
 import lightgbm
@@ -45,11 +44,15 @@ import PARAMETERS
 
 class LGBMClassifierColNames(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
-        x.columns = [str(col).replace(':', '') for col in list(x.columns)]
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('category')
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
-        x.columns = [str(col).replace(':', '') for col in list(x.columns)]
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('category')
         return super().predict(x, *args, **kwargs)
 
 
@@ -120,20 +123,32 @@ def ensemble_prediction(classifiers, dfs_test):
     return y_predictions, y_actual
 
 
-def load_datasets_for_lbp_operator(discard_columns=False):
+def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     # Database unzip
-    parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
-    train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
-    with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
-        zip_ref.extractall(f'{parent_path}/DB/')
-    test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
-    with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
-        zip_ref.extractall(f'{parent_path}/DB/')
+    if PARAMETERS.CONVOLUTION is None:
+        db_path = f"{parent_path}/DB"
+        # train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
+        # test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
 
-    df_train_temp = pd.read_pickle(f'{train_file_name}.pkl')
-    os.remove(f'{train_file_name}.pkl')
-    df_test_temp = pd.read_pickle(f'{test_file_name}.pkl')
-    os.remove(f'{test_file_name}.pkl')
+        # with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
+        #     zip_ref.extractall(f'{db_path}')
+        #
+        # with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
+        #     zip_ref.extractall(f'{db_path}')
+        #
+        # df_train_temp = pd.read_pickle(f'{train_file_name}.pkl')
+        # os.remove(f'{train_file_name}.pkl')
+        # df_test_temp = pd.read_pickle(f'{test_file_name}.pkl')
+        # os.remove(f'{test_file_name}.pkl')
+    else:
+        db_path = f"{parent_path}/DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}"
+        # df_train_temp = pd.read_pickle(f'{train_file_name}.pkl', compression='gzip')
+        # df_test_temp = pd.read_pickle(f'{test_file_name}.pkl', compression='gzip')
+    train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
+    test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
+    df_train_temp = pd.read_pickle(f'{train_file_name}.pkl', compression='gzip')
+    df_test_temp = pd.read_pickle(f'{test_file_name}.pkl', compression='gzip')
+
     y_train_temp = df_train_temp.loc[:, 'label']
     y_test_temp = df_test_temp.loc[:, 'label']
     df_train_temp.drop(columns=['label'], inplace=True)
@@ -159,12 +174,22 @@ def main(lgb=False, plot_once=False, extra_features=None, all_lbp=False):
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
         # Database unzip
-        train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
+        if PARAMETERS.CONVOLUTION is None:
+            db_path = f"{parent_path}/DB"
+            # train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
+            # test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
+        else:
+            db_path = f"{parent_path}/DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}"
+            # train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
+            # test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
+
+        train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
+        test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
         with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
-            zip_ref.extractall(f'{parent_path}/DB/')
-        test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
+            zip_ref.extractall(f'{db_path}')
+
         with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
-            zip_ref.extractall(f'{parent_path}/DB/')
+            zip_ref.extractall(f'{db_path}')
 
         with open(f'{train_file_name}.pkl', 'rb') as f:
             df_train_list = pickle.load(f)
@@ -187,13 +212,13 @@ def main(lgb=False, plot_once=False, extra_features=None, all_lbp=False):
                 PARAMETERS.LBP_METHOD = lbp_operator
                 PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
                 if i == 0:
-                    df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator()
+                    df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
                 else:
-                    temp_datasets = load_datasets_for_lbp_operator(discard_columns=True)
+                    temp_datasets = load_datasets_for_lbp_operator(parent_path, discard_columns=True)
                     df_train = pd.concat([df_train, temp_datasets[0]], axis=1)
                     df_test = pd.concat([df_test, temp_datasets[1]], axis=1)
         else:
-            df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator()
+            df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
 
         if extra_features is not None:
             df_train = pd.concat([df_train, extra_features['train']], axis=1)
@@ -245,8 +270,8 @@ if __name__ == '__main__':
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',
                     'Accuracy', 'F1 score', 'tn', 'fp', 'fn', 'tp'
                 ])
-        parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
-        for filename in Path(f"{parent_path}/DB").glob('train_train_*'):
+        main_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
+        for filename in Path(f"{main_path}/DB").glob('train_train_*'):
             PARAMETERS.FILE_EXTENSION = \
                 str(filename).replace('train_train_', '').split('/')[-1].replace('.zip', '').replace('.pkl', '')
             properties = PARAMETERS.FILE_EXTENSION.replace(
@@ -276,4 +301,4 @@ if __name__ == '__main__':
                     'Accuracy', 'F1 score', 'tn', 'fp', 'fn', 'tp'
                 ]
             ).T, ignore_index=True)
-        metrics.to_csv(f"{parent_path}/Results/metrics.csv")
+        metrics.to_csv(f"{main_path}/Results/metrics.csv")
