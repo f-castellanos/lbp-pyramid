@@ -22,7 +22,8 @@ class ParameterError(Exception):
 
 
 VALID_PARAMETERS = {
-    'LBP_METHOD': ['default', 'riu', 'riu2'],
+    # 'LBP_METHOD': ['var'],
+    'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
     'METHOD': ['get_pyramid_dataset'],
     # 'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
     'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
@@ -124,6 +125,13 @@ class Preprocess:
                     img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT)
                     with bz2.BZ2File(f"{lbp_path}/{new_filename}", 'wb') as f:
                         pickle.dump(img_lbp, f)
+                if lbp_operator == 'riu2' and not os.path.isfile(f"{lbp_path}_2/{new_filename}"):
+                    if not os.path.exists(f"{lbp_path}_2"):
+                        os.makedirs(f"{lbp_path}_2")
+                    img = Preprocess.read_img(filename)
+                    img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
+                    with bz2.BZ2File(f"{lbp_path}_2/{new_filename}", 'wb') as f:
+                        pickle.dump(img_lbp, f)
 
     @staticmethod
     def parameters_verification():
@@ -131,11 +139,8 @@ class Preprocess:
         Verification of the given execution parameters
         :return: None
         """
-        # print(VALID_PARAMETERS)
         if 'SKIP_VALIDATION' not in os.environ or os.environ['SKIP_VALIDATION'] != 'True':
             for k, v in VALID_PARAMETERS.items():
-                # print(getattr(PARAMETERS, k))
-                # print(v)
                 if getattr(PARAMETERS, k) not in v:
                     raise ParameterError(f"{getattr(PARAMETERS, k)} is not correctly defined")
 
@@ -148,10 +153,6 @@ class Preprocess:
         :return: Numpy array containing the information of the image
         """
         img = np.asarray(Image.open(path).convert('L'))
-        # if PARAMETERS.X2SCALE and x2_enabled:
-        #     img = self.rescale(
-        #         img.copy(), (img.shape[1] * 2, img.shape[0] * 2)
-        #     )
         return img.copy()
 
     @staticmethod
@@ -281,7 +282,7 @@ class Preprocess:
         return img, mask
 
     #  LBP
-    def apply_lbp(self, img, plot=False, method=None, pre_loaded=False):
+    def apply_lbp(self, img, plot=False, method=None, r=1):
         """
         Returns the LBP values for the given image
         :param img: Numpy array containing the information of the image.
@@ -291,20 +292,8 @@ class Preprocess:
         # scale = self.scale/2 if PARAMETERS.X2SCALE else self.scale
         if method is None:
             method = self.lbp_method
-        # try:
-        #     if plot or not pre_loaded:
-        #         raise FileNotFoundError
-            # with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
-            #           f'_{self.scale}_{method}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'rb') as f:
-            #     lbp_img = pickle.load(f)
-        # except FileNotFoundError:
-        #     lbp_img = lbp(img, r=self.lbp_radius, method=method, plot=plot)
-            # if pre_loaded:
-            #     with open(f'{PARENT_PATH}/tmp/{self.path.split("/")[-1].replace(".tif", "")}'
-            #               f'_{self.scale}_{method}_{PARAMETERS.INTERPOLATION_ALGORITHM}.pkl', 'wb') as f:
-            #         pickle.dump(lbp_img, f)
-        lbp_img = lbp(img, r=self.lbp_radius, method=method, plot=plot)
-        return lbp_img
+        lbp_img = lbp(img, r=r, method=method, plot=plot)
+        return np.nan_to_num(lbp_img)
 
     # Image transformations
     @staticmethod
@@ -435,23 +424,18 @@ class Preprocess:
         :param plot: Boolean to determine whether to plot the results
         :return: DataFrame of the features calculated from the image
         """
-        # self.path = path
         filename = path.split('/')[-1]
         path = f"{self.preprocessed_path}/{PARAMETERS.INTERPOLATION_ALGORITHM}/lbp/{PARAMETERS.LBP_METHOD}"
-        # img = self.read_img(path)
-        # img, mask = self.filter_by_mask(img, mask_path)
-        # img = Preprocess.img_processing(img, plot)
-        # img = self.rescale_add_borders(img)
+        if PARAMETERS.LBP_METHOD == 'riu2' and PARAMETERS.RADIUS == 2:
+            path += '_2'
+        elif PARAMETERS.RADIUS > 1:
+            raise Exception
         scale_names = ['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][:(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE))]
         if PARAMETERS.X2SCALE:
             scale_names += ['2:1_1', '2:1_2', '2:1_3', '2:1_4']
             lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES + 3), dtype='uint8')
-            # img_resized = Preprocess.rescale(img.copy(), (self.width // 0.5, self.height // 0.5))
-            # self.scale = 0.5
-            # img_lbp = self.apply_lbp(img_resized, plot=plot)
             with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_0.5.pkl", 'rb') as f:
                 img_lbp = pickle.load(f)
-            # img_lbp = self.read_img(f"{path}/{filename.split('.tif')[0]}_0.5.pkl")
             lbp_matrix[:, -4:] = Preprocess.undo_repeat_pixels(img_lbp)
         else:
             lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES), dtype='uint8')
@@ -462,7 +446,6 @@ class Preprocess:
         '''
         for i in 2 ** np.arange(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE)):
             with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl", 'rb') as f:
-            # with open(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl", 'rb') as f:
                 img_lbp = pickle.load(f)
             img_lbp = Preprocess.repeat_pixels(img_lbp, i)
             lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()

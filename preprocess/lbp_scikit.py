@@ -10,6 +10,8 @@ LBP_METHODS_MAP = {
     'default': 'default',
     'riu': 'ror',
     'riu2': 'uniform',
+    'nriuniform': 'nri_uniform',
+    'var': 'var',
 }
 
 
@@ -61,7 +63,8 @@ def plot_lbp(img, img_lbp):
 
 
 def lbp(img, r=1, method='default', plot=False):
-    p = 8
+    # p is the number of pixels in a square of radio r
+    p = 8 * r
     n_points = p * r
     img_lbp = local_binary_pattern(img, p, r, method=LBP_METHODS_MAP[method])
     if method == 'riu':

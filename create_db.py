@@ -1,7 +1,7 @@
 ##
 import os
 import pickle
-import zipfile
+# import zipfile
 from pathlib import Path
 import itertools
 
@@ -56,15 +56,17 @@ def main(single_exec=False):
     preprocess.compute_preprocessing(images, masks, path)
 
     # Train - Test dataframes
-    if PARAMETERS.CONVOLUTION is None:
-        train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
-        test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
+    if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
+        db_folder = 'DB'
+    elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
+        db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
     else:
-        db_path = f"{parent_path}/DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}"
-        if not os.path.exists(db_path):
-            os.makedirs(db_path)
-        train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
-        test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
+        db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
+    db_path = f"{parent_path}/{db_folder}"
+    if not os.path.exists(db_path):
+        os.makedirs(db_path)
+    train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
+    test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
 
     if single_exec:
         _ = img_preprocess(preprocess, 0, images[0], masks[0], labels[0], path)
@@ -89,35 +91,8 @@ def main(single_exec=False):
             with open(f'{test_file_name}.pkl', 'wb') as f:
                 pickle.dump(df_list[14:], f)
         elif PARAMETERS.METHOD == 'get_pyramid_dataset':
-            # if PARAMETERS.CONVOLUTION is None:
-            #     pd.concat(df_list[:14]).to_pickle(f'{train_file_name}.pkl')
-            #     pd.concat(df_list[14:]).to_pickle(f'{test_file_name}.pkl')
-            # else:
-            #     pd.concat(df_list[:14]).to_pickle(f'{train_file_name}.pkl', compression='gzip')
-            #     pd.concat(df_list[14:]).to_pickle(f'{test_file_name}.pkl', compression='gzip')
             pd.concat(df_list[:14]).to_pickle(f'{train_file_name}.pkl', compression='gzip')
             pd.concat(df_list[14:]).to_pickle(f'{test_file_name}.pkl', compression='gzip')
-
-        # if PARAMETERS.CONVOLUTION is None:
-        # #     Zip output
-        #     try:
-        #         os.remove(f'{train_file_name}.zip')
-        #     except OSError:
-        #         pass
-        #     zipfile.ZipFile(f'{train_file_name}.zip', 'w', zipfile.ZIP_DEFLATED).write(
-        #         f'{train_file_name}.pkl',
-        #         f'{train_file_name.split("/")[-1]}.pkl'
-        #     )
-        #     os.remove(f'{train_file_name}.pkl')
-        #     try:
-        #         os.remove(f'{test_file_name}.zip')
-        #     except OSError:
-        #         pass
-        #     zipfile.ZipFile(f'{test_file_name}.zip', 'w', zipfile.ZIP_DEFLATED).write(
-        #         f'{test_file_name}.pkl',
-        #         f'{test_file_name.split("/")[-1]}.pkl'
-        #     )
-        #     os.remove(f'{test_file_name}.pkl')
 
 
 ##

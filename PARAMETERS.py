@@ -5,8 +5,12 @@ Defines the LBP algorithm version to be used.
 · default: LBP original version [https://medium.com/@rajatanantharam/local-binary-patterns-8807ecf7f87c].
 · riu: Rotation invariant version [https://www.researchgate.net/publication/221303862_Gray_Scale_and_Rotation_Invariant_Texture_Classification_with_Local_Binary_Patterns].
 · riu2: Improved rotation invariance with uniform patterns [https://www.researchgate.net/publication/221303862_Gray_Scale_and_Rotation_Invariant_Texture_Classification_with_Local_Binary_Patterns].
+· nriuniform: non rotation-invariant uniform patterns variant which is only gray scale invariant
+· var: rotation invariant variance measures of the contrast of local image texture which is rotation but not gray scale invariant.
+
 """  # noqa
-LBP_METHOD = 'default'
+LBP_METHOD = 'riu2'
+# LBP_METHOD = 'default'
 
 """
 METHOD
@@ -25,7 +29,8 @@ Defines the interpolation algorithm to be used in the image rescaling process.
 · bicubic: Cubic interpolation on all pixels that may contribute to the output value.
 · lanczos: Calculate the output pixel value using a high-quality Lanczos filter.
 """
-INTERPOLATION_ALGORITHM = 'lanczos'
+INTERPOLATION_ALGORITHM = 'nearest'
+# INTERPOLATION_ALGORITHM = 'lanczos'
 
 """
 BALANCE    <- ONLY for get_pyramid_dataset
@@ -35,6 +40,7 @@ Whether to remove data from the train set in order to equalize the proportion of
 · False
 """
 BALANCE = False
+# BALANCE = False
 
 """
 N_SCALES
@@ -42,7 +48,8 @@ N_SCALES
 Number of scales to use.
 1 - 6
 """
-N_SCALES = 5
+N_SCALES = 1
+# N_SCALES = 5
 
 """
 GRAY_INTENSITY    <- ONLY for get_pyramid_dataset
@@ -51,7 +58,8 @@ Whether to add a variable with the intensity of each pixel in the gray scale ima
 · True
 · False
 """
-GRAY_INTENSITY = True
+GRAY_INTENSITY = False
+# GRAY_INTENSITY = True
 
 """
 X2SCALE
@@ -67,6 +75,7 @@ X2SCALE = False
 ENCODING = 'categorical'
 
 CONVOLUTION = None
+RADIUS = 1
 
 # Other parameters
 PLOT = False

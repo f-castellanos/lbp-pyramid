@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.naive_bayes import CategoricalNB
+from sklearn.naive_bayes import CategoricalNB, MultinomialNB
 # from xgboost import XGBClassifier
 from sklearn.metrics import f1_score, make_scorer
 
@@ -46,20 +46,26 @@ class LGBMClassifierColNames(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
-            x[col] = x[col].astype('category')
+            if len(np.unique(x[col])) > 260:
+                x[col] = x[col].astype('category')
+            else:
+                x[col] = x[col].astype('float')
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
-            x[col] = x[col].astype('category')
+            if len(np.unique(x[col])) > 260:
+                x[col] = x[col].astype('category')
+            else:
+                x[col] = x[col].astype('float')
         return super().predict(x, *args, **kwargs)
 
 
 def init_clf_and_fit(df, y, lgb=False):
     if lgb:
         # clf = XGBClassifier(n_jobs=-1, objective='binary:logistic', enable_categorical=True)
-        f1 = make_scorer(f1_score, average='macro')
+        # f1 = make_scorer(f1_score, average='macro')
         # parameters = {
         #     'num_leaves': [10, 15, 30],
         #     'min_child_samples': [5, 10, 15],
@@ -88,14 +94,18 @@ def init_clf_and_fit(df, y, lgb=False):
         #     multi_clf = MultinomialNB(fit_prior=True)
         #     multi_clf.fit(df[['Original']], y)
         #     df.drop(columns=['Original'], inplace=True)
-        clf = CategoricalNB(
-            fit_prior=True,
-            min_categories={
-                'default': 256,
-                'riu': 36,
-                'riu2': 10
-            }[PARAMETERS.LBP_METHOD]
-        )
+        if PARAMETERS.LBP_METHOD == 'var':
+            clf = MultinomialNB(fit_prior=True)
+        else:
+            clf = CategoricalNB(
+                fit_prior=True,
+                min_categories={
+                    'default': 256,
+                    'riu': 36,
+                    'riu2': 10,
+                    'nriuniform': 59,
+                }[PARAMETERS.LBP_METHOD]
+            )
         # if 'Original' in df:
         #     clf = RandomForestClassifier(estimators=[('multi', multi_clf), ('cat', clf)])
         clf.fit(df, y)
@@ -124,26 +134,15 @@ def ensemble_prediction(classifiers, dfs_test):
 
 
 def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
-    # Database unzip
-    if PARAMETERS.CONVOLUTION is None:
-        db_path = f"{parent_path}/DB"
-        # train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
-        # test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
-
-        # with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
-        #     zip_ref.extractall(f'{db_path}')
-        #
-        # with zipfile.ZipFile(f'{test_file_name}.zip', 'r') as zip_ref:
-        #     zip_ref.extractall(f'{db_path}')
-        #
-        # df_train_temp = pd.read_pickle(f'{train_file_name}.pkl')
-        # os.remove(f'{train_file_name}.pkl')
-        # df_test_temp = pd.read_pickle(f'{test_file_name}.pkl')
-        # os.remove(f'{test_file_name}.pkl')
-    else:
-        db_path = f"{parent_path}/DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}"
-        # df_train_temp = pd.read_pickle(f'{train_file_name}.pkl', compression='gzip')
-        # df_test_temp = pd.read_pickle(f'{test_file_name}.pkl', compression='gzip')
+    # Database reading
+    db_folder = 'DB'
+    # if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
+    #     db_folder = 'DB'
+    # elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
+    #     db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
+    # else:
+    #     db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
+    db_path = f"{parent_path}/{db_folder}"
     train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
     test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
     df_train_temp = pd.read_pickle(f'{train_file_name}.pkl', compression='gzip')
@@ -173,16 +172,15 @@ def main(lgb=False, plot_once=False, extra_features=None, all_lbp=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
-        # Database unzip
-        if PARAMETERS.CONVOLUTION is None:
-            db_path = f"{parent_path}/DB"
-            # train_file_name = f"{parent_path}/DB/train_train_{PARAMETERS.FILE_EXTENSION}"
-            # test_file_name = f"{parent_path}/DB/train_test_{PARAMETERS.FILE_EXTENSION}"
-        else:
-            db_path = f"{parent_path}/DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}"
-            # train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
-            # test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
-
+        # Database reading
+        db_folder = 'DB'
+        # if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
+        #     db_folder = 'DB'
+        # elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
+        #     db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
+        # else:
+        #     db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
+        db_path = f"{parent_path}/{db_folder}"
         train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
         test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
         with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
@@ -208,7 +206,7 @@ def main(lgb=False, plot_once=False, extra_features=None, all_lbp=False):
         df_train = None
         df_test = None
         if all_lbp:
-            for i, lbp_operator in enumerate(['default', 'riu', 'riu2']):
+            for i, lbp_operator in enumerate(['default', 'riu', 'riu2', 'nriuniform', 'var']):
                 PARAMETERS.LBP_METHOD = lbp_operator
                 PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
                 if i == 0:
