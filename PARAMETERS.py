@@ -78,7 +78,7 @@ CONVOLUTION = None
 RADIUS = 1
 
 # Other parameters
-PLOT = False
+PLOT = True
 PLOT_LBP_LABEL = False
 N_JOBS = 1
 HEIGHT = 608

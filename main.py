@@ -18,35 +18,39 @@ from preprocess.preprocess import Preprocess
 import PARAMETERS
 
 
-# class EnsembleClassifier:
-#     def __init__(self, num_columns):
-#         self.num_columns = num_columns
-#         self.multi_clf = MultinomialNB(fit_prior=True)
-#         self.cat_clf = CategoricalNB(fit_prior=True)
-#
-#     def fit(self, x, y):
-#         self.num_columns = [col for col in self.num_columns if col in x]
-#         if len(self.num_columns) > 0:
-#             num_x = x[self.num_columns]
-#             x.drop(columns=self.num_columns, inplace=True)
-#             self.multi_clf.fit(num_x, y)
-#             x = pd.concat(
-#                 (x, self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
-#                 axis=1
-#             )
-#         self.cat_clf.fit(x, y)
-#
-#     def predict(self, x):
-#         if len(self.num_columns) > 0:
-#             num_y = self.multi_clf.predict(x)
-#         cat_y = self.cat_clf.predict(x)
-
-
-class LGBMClassifierColNames(lightgbm.LGBMClassifier):
+class LGBMCategorical(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
-            if len(np.unique(x[col])) > 260:
+            x[col] = x[col].astype('category')
+        return super().fit(x, *args, **kwargs)
+
+    def predict(self, x, *args, **kwargs):
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('category')
+        return super().predict(x, *args, **kwargs)
+
+
+class LGBMNumerical(lightgbm.LGBMClassifier):
+    def fit(self, x, *args, **kwargs):
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('float')
+        return super().fit(x, *args, **kwargs)
+
+    def predict(self, x, *args, **kwargs):
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('float')
+        return super().predict(x, *args, **kwargs)
+
+
+class LGBMCatNum(lightgbm.LGBMClassifier):
+    def fit(self, x, *args, **kwargs):
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            if len(np.unique(x[col])) < 260:
                 x[col] = x[col].astype('category')
             else:
                 x[col] = x[col].astype('float')
@@ -55,15 +59,15 @@ class LGBMClassifierColNames(lightgbm.LGBMClassifier):
     def predict(self, x, *args, **kwargs):
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
-            if len(np.unique(x[col])) > 260:
+            if len(np.unique(x[col])) < 260:
                 x[col] = x[col].astype('category')
             else:
                 x[col] = x[col].astype('float')
         return super().predict(x, *args, **kwargs)
 
 
-def init_clf_and_fit(df, y, lgb=False):
-    if lgb:
+def init_clf_and_fit(df, y, lgb=''):
+    if lgb == 'Num':
         # clf = XGBClassifier(n_jobs=-1, objective='binary:logistic', enable_categorical=True)
         # f1 = make_scorer(f1_score, average='macro')
         # parameters = {
@@ -75,7 +79,7 @@ def init_clf_and_fit(df, y, lgb=False):
         #     'colsample_bytree': [0.4, 0.6, 0.8],
         #     'subsample': [0.6, 0.8]
         # }
-        clf = LGBMClassifierColNames(
+        clf = LGBMNumerical(
             num_leaves=50,
             max_depth=30,
             random_state=42,
@@ -88,6 +92,34 @@ def init_clf_and_fit(df, y, lgb=False):
             learning_rate=0.5
         )
         # clf = GridSearchCV(lgb_clf, parameters, n_jobs=-1, scoring=f1)
+        clf.fit(df, y, eval_metric=['auc'])
+    elif lgb == 'Cat':
+        clf = LGBMCategorical(
+            num_leaves=50,
+            max_depth=30,
+            random_state=42,
+            verbose=0,
+            # metric='None',
+            n_jobs=8,
+            # n_estimators=1000,
+            colsample_bytree=0.9,
+            subsample=0.7,
+            learning_rate=0.5
+        )
+        clf.fit(df, y, eval_metric=['auc'])
+    elif lgb == 'CatNum':
+        clf = LGBMCatNum(
+            num_leaves=50,
+            max_depth=30,
+            random_state=42,
+            verbose=0,
+            # metric='None',
+            n_jobs=8,
+            # n_estimators=1000,
+            colsample_bytree=0.9,
+            subsample=0.7,
+            learning_rate=0.5
+        )
         clf.fit(df, y, eval_metric=['auc'])
     else:
         # if 'Original' in df:
@@ -168,7 +200,7 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     return df_train_temp, df_test_temp, y_train_temp, y_test_temp
 
 
-def main(lgb=False, plot_once=False, extra_features=None, all_lbp=False):
+def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
@@ -262,7 +294,7 @@ def main(lgb=False, plot_once=False, extra_features=None, all_lbp=False):
 
 if __name__ == '__main__':
     if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
-        main(lgb=True)
+        main(lgb='Num')
     else:
         metrics = pd.DataFrame(columns=[
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',
