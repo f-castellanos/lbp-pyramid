@@ -1,3 +1,5 @@
+import numpy as np
+
 """
 LBP_METHOD
 ----------
@@ -75,6 +77,8 @@ X2SCALE = False
 ENCODING = 'categorical'
 
 CONVOLUTION = None
+# CONVOLUTION = np.round(np.random.uniform(low=-1, high=1, size=(9,)).reshape(3, 3), 3)
+CONV_PATH = None if CONVOLUTION is None else ';'.join(CONVOLUTION.ravel().astype(str))
 RADIUS = 1
 
 # Other parameters
@@ -95,3 +99,7 @@ def update_file_extension(parameters):
     return f"{parameters.LBP_METHOD}_{parameters.METHOD}_{parameters.INTERPOLATION_ALGORITHM}" \
                  f"_balance-{parameters.BALANCE}_scales-{parameters.N_SCALES}_x2-{parameters.X2SCALE}" \
                  f"_gray-intensity-{parameters.GRAY_INTENSITY}"
+
+
+def update_convolution_path(parameters):
+    return ';'.join(parameters.CONVOLUTION.ravel().astype(str))

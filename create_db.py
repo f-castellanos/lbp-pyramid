@@ -61,7 +61,7 @@ def main(single_exec=False):
     elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
         db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
     else:
-        db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
+        db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONV_PATH}'
     db_path = f"{parent_path}/{db_folder}"
     if not os.path.exists(db_path):
         os.makedirs(db_path)

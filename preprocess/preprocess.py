@@ -40,21 +40,15 @@ PARENT_PATH = str(Path(os.path.dirname(os.path.abspath(__file__))).parent.parent
 class Preprocess:
     def __init__(self, height, width, balance=False, lbp_radius=1,
                  lbp_method='default', mask_threshold=100, label_threshold=30):
-        # self.height = height * 2 if PARAMETERS.X2SCALE else height
-        # self.width = width * 2 if PARAMETERS.X2SCALE else width
         self.height = height
         self.width = width
         self.balance = balance
-        # self.original_height = 584 * 2 if PARAMETERS.X2SCALE else height
-        # self.original_width = 565 * 2 if PARAMETERS.X2SCALE else width
         self.original_height = 584
         self.original_width = 565
         self.mask_threshold = mask_threshold
         self.label_threshold = label_threshold
         self.lbp_radius = lbp_radius
         self.lbp_method = lbp_method
-        # self.path = None
-        # self.scale = None
         self.parameters_verification()
         self.training_path = None
         self.images_path = None
@@ -69,7 +63,8 @@ class Preprocess:
         if PARAMETERS.CONVOLUTION is None:
             self.preprocessed_path = f"{self.training_path}preprocessed"
         else:
-            self.preprocessed_path = f"{self.training_path}preprocessed_convolutions/{PARAMETERS.CONVOLUTION}"
+            PARAMETERS.CONV_PATH = PARAMETERS.update_convolution_path(PARAMETERS)
+            self.preprocessed_path = f"{self.training_path}preprocessed_convolutions/{PARAMETERS.CONV_PATH}"
             self.original_preprocessed_path = f"{self.training_path}preprocessed"
         # for algorithm in VALID_PARAMETERS['INTERPOLATION_ALGORITHM']:
         with parallel_backend('multiprocessing', n_jobs=PARAMETERS.N_JOBS):
@@ -100,11 +95,15 @@ class Preprocess:
             else:
                 for i in float(2) ** np.arange(-1, 6):
                     img = Preprocess.read_img(f"{self.original_preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
-                    kernel_len = int(len(PARAMETERS.CONVOLUTION) ** 0.5)
-                    kernel = np.array(list(PARAMETERS.CONVOLUTION)).reshape(kernel_len, kernel_len).astype(np.int8)
-                    img = cv2.filter2D(img, -1, kernel)
-                    im = Image.fromarray(img)
-                    im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
+                    # kernel_len = int(len(PARAMETERS.CONVOLUTION) ** 0.5)
+                    # kernel = np.array(list(PARAMETERS.CONVOLUTION)).reshape(kernel_len, kernel_len).astype(np.int8)
+                    # img = cv2.filter2D(img, -1, kernel)
+                    img = cv2.filter2D(img, -1, PARAMETERS.CONVOLUTION)
+                    # img = np.round((img/np.max(img)) * 255).astype(np.int8)
+                    # Image.fromarray(img).convert('RGB').save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
+                    img = np.round((img/np.max(img)) * 255).astype(np.int8)
+                    with bz2.BZ2File(f"{algorithm_path}/{filename.split('.')[0]}_{i}.pkl", 'wb') as f:
+                        pickle.dump(img, f)
 
         self.compute_lbp(algorithm)
 
@@ -121,15 +120,27 @@ class Preprocess:
                 filename = str(filename)
                 new_filename = filename.split('/')[-1].replace('.jpeg', '.pkl')
                 if not os.path.isfile(f"{lbp_path}/{new_filename}"):
-                    img = Preprocess.read_img(filename)
-                    img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT)
+                    if PARAMETERS.CONVOLUTION is None:
+                        img = Preprocess.read_img(filename)
+                        img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT)
+                    else:
+                        with bz2.BZ2File(filename.replace('.jpeg', '.pkl'), 'rb') as f:
+                            img = pickle.load(f)
+                        img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT)
                     with bz2.BZ2File(f"{lbp_path}/{new_filename}", 'wb') as f:
                         pickle.dump(img_lbp, f)
                 if lbp_operator == 'riu2' and not os.path.isfile(f"{lbp_path}_2/{new_filename}"):
                     if not os.path.exists(f"{lbp_path}_2"):
                         os.makedirs(f"{lbp_path}_2")
-                    img = Preprocess.read_img(filename)
-                    img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
+                    if PARAMETERS.CONVOLUTION is None:
+                        img = Preprocess.read_img(filename)
+                        img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
+                    else:
+                        with bz2.BZ2File(filename.replace('.jpeg', '.pkl'), 'rb') as f:
+                            img = pickle.load(f)
+                        img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
+                    # img = Preprocess.read_img(filename)
+                    # img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
                     with bz2.BZ2File(f"{lbp_path}_2/{new_filename}", 'wb') as f:
                         pickle.dump(img_lbp, f)
 
@@ -452,7 +463,11 @@ class Preprocess:
         #  Original image
         img_path = f"{self.preprocessed_path}/{PARAMETERS.INTERPOLATION_ALGORITHM}/original/" \
                    f"{filename.split('.tif')[0]}_1.0.jpeg"
-        img = Preprocess.read_img(img_path)
+        if PARAMETERS.CONVOLUTION is None:
+            img = Preprocess.read_img(img_path)
+        else:
+            with bz2.BZ2File(img_path.replace('.jpeg', '.pkl'), 'rb') as f:
+                img = pickle.load(f)
         mask = self.read_img(mask_path)
         if PARAMETERS.GRAY_INTENSITY:
             lbp_matrix = np.concatenate((

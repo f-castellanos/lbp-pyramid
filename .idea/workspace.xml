@@ -22,11 +22,13 @@
     <select />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="Radius">
+    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="LGBM classifier fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PARAMETERS.py" beforeDir="false" afterPath="$PROJECT_DIR$/PARAMETERS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/metrics-comparison.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/metrics-comparison.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convolutions.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/convolutions.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/create_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lbm_fit.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/lbm_fit.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -503,7 +505,14 @@
       <option name="project" value="LOCAL" />
       <updated>1638257816043</updated>
     </task>
-    <option name="localTasksCounter" value="42" />
+    <task id="LOCAL-00042" summary="LGBM classifier fix">
+      <created>1639231788310</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1639231788311</updated>
+    </task>
+    <option name="localTasksCounter" value="43" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -518,7 +527,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Preprocessing - LBP: 0.0" />
     <MESSAGE value="LBP applied with mask" />
     <MESSAGE value="Label plotting" />
     <MESSAGE value="Label + LBP plotting" />
@@ -543,7 +551,8 @@
     <MESSAGE value="Fix one hot encode" />
     <MESSAGE value="Convolutions" />
     <MESSAGE value="Radius" />
-    <option name="LAST_COMMIT_MESSAGE" value="Radius" />
+    <MESSAGE value="LGBM classifier fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="LGBM classifier fix" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
