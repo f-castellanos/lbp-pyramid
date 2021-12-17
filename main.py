@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.naive_bayes import CategoricalNB, MultinomialNB
+# https://ichi.pro/es/por-que-y-como-utilizar-los-algoritmos-naive-bayes-en-una-industria-regulada-con-sklearn-python-codigo-241721569620687  noqa
 # from xgboost import XGBClassifier
 from sklearn.metrics import f1_score, make_scorer
 
