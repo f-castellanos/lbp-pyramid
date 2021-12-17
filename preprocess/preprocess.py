@@ -1,20 +1,18 @@
-import os
 import _pickle as pickle
-from pathlib import Path
 import bz2
+import os
+from pathlib import Path
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PIL import Image
-from sklearn.preprocessing import OneHotEncoder
 from joblib import Parallel, delayed, parallel_backend
+from sklearn.preprocessing import OneHotEncoder
 
 import PARAMETERS
 from lbp_scikit import lbp
-# from lbp import lbp
-# from .lbp import lbp
 
 
 class ParameterError(Exception):
@@ -95,12 +93,7 @@ class Preprocess:
             else:
                 for i in float(2) ** np.arange(-1, 6):
                     img = Preprocess.read_img(f"{self.original_preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
-                    # kernel_len = int(len(PARAMETERS.CONVOLUTION) ** 0.5)
-                    # kernel = np.array(list(PARAMETERS.CONVOLUTION)).reshape(kernel_len, kernel_len).astype(np.int8)
-                    # img = cv2.filter2D(img, -1, kernel)
                     img = cv2.filter2D(img, -1, PARAMETERS.CONVOLUTION)
-                    # img = np.round((img/np.max(img)) * 255).astype(np.int8)
-                    # Image.fromarray(img).convert('RGB').save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
                     img = np.round((img/np.max(img)) * 255).astype(np.int8)
                     with bz2.BZ2File(f"{algorithm_path}/{filename.split('.')[0]}_{i}.pkl", 'wb') as f:
                         pickle.dump(img, f)
@@ -108,7 +101,6 @@ class Preprocess:
         self.compute_lbp(algorithm)
 
     def compute_lbp(self, algorithm):
-        # for algorithm in VALID_PARAMETERS['INTERPOLATION_ALGORITHM']:
         algorithm_path = f"{self.preprocessed_path}/{algorithm}"
         original_path = f"{algorithm_path}/original"
         filenames = list(Path(original_path).glob("*"))
@@ -129,20 +121,22 @@ class Preprocess:
                         img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT)
                     with bz2.BZ2File(f"{lbp_path}/{new_filename}", 'wb') as f:
                         pickle.dump(img_lbp, f)
-                if lbp_operator == 'riu2' and not os.path.isfile(f"{lbp_path}_2/{new_filename}"):
-                    if not os.path.exists(f"{lbp_path}_2"):
-                        os.makedirs(f"{lbp_path}_2")
-                    if PARAMETERS.CONVOLUTION is None:
-                        img = Preprocess.read_img(filename)
-                        img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
-                    else:
-                        with bz2.BZ2File(filename.replace('.jpeg', '.pkl'), 'rb') as f:
-                            img = pickle.load(f)
-                        img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
-                    # img = Preprocess.read_img(filename)
-                    # img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=2)
-                    with bz2.BZ2File(f"{lbp_path}_2/{new_filename}", 'wb') as f:
-                        pickle.dump(img_lbp, f)
+                # Processing of radius 2-4
+                for r in range(2, 5):
+                    # riu with r > 2 freezes the process
+                    if not os.path.isfile(f"{lbp_path}_{r}/{new_filename}") and lbp_operator != 'riu':
+                        # print(f"{lbp_path}_{r}/{new_filename}")
+                        if not os.path.exists(f"{lbp_path}_{r}"):
+                            os.makedirs(f"{lbp_path}_{r}")
+                        if PARAMETERS.CONVOLUTION is None:
+                            img = Preprocess.read_img(filename)
+                            img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=r)
+                        else:
+                            with bz2.BZ2File(filename.replace('.jpeg', '.pkl'), 'rb') as f:
+                                img = pickle.load(f)
+                            img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=r)
+                        with bz2.BZ2File(f"{lbp_path}_{r}/{new_filename}", 'wb') as f:
+                            pickle.dump(img_lbp, f)
 
     @staticmethod
     def parameters_verification():
@@ -437,10 +431,10 @@ class Preprocess:
         """
         filename = path.split('/')[-1]
         path = f"{self.preprocessed_path}/{PARAMETERS.INTERPOLATION_ALGORITHM}/lbp/{PARAMETERS.LBP_METHOD}"
-        if PARAMETERS.LBP_METHOD == 'riu2' and PARAMETERS.RADIUS == 2:
-            path += '_2'
-        elif PARAMETERS.RADIUS > 1:
-            raise Exception
+        if PARAMETERS.RADIUS > 1:
+            path += f'_{PARAMETERS.RADIUS}'
+        # elif PARAMETERS.RADIUS > 1:
+        #     raise Exception
         scale_names = ['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][:(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE))]
         if PARAMETERS.X2SCALE:
             scale_names += ['2:1_1', '2:1_2', '2:1_3', '2:1_4']

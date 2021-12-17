@@ -52,7 +52,6 @@ def main(single_exec=False):
     masks = sorted(os.listdir(masks_path))
     labels_path = path + '1st_manual/'
     labels = sorted(os.listdir(labels_path))
-
     preprocess.compute_preprocessing(images, masks, path)
 
     # Train - Test dataframes
