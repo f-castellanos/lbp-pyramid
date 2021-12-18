@@ -11,8 +11,8 @@ Defines the LBP algorithm version to be used.
 · var: rotation invariant variance measures of the contrast of local image texture which is rotation but not gray scale invariant.
 
 """  # noqa
-LBP_METHOD = 'riu2'
-# LBP_METHOD = 'default'
+# LBP_METHOD = 'riu2'
+LBP_METHOD = 'default'
 
 """
 METHOD
@@ -31,8 +31,8 @@ Defines the interpolation algorithm to be used in the image rescaling process.
 · bicubic: Cubic interpolation on all pixels that may contribute to the output value.
 · lanczos: Calculate the output pixel value using a high-quality Lanczos filter.
 """
-INTERPOLATION_ALGORITHM = 'nearest'
-# INTERPOLATION_ALGORITHM = 'lanczos'
+# INTERPOLATION_ALGORITHM = 'nearest'
+INTERPOLATION_ALGORITHM = 'lanczos'
 
 """
 BALANCE    <- ONLY for get_pyramid_dataset
@@ -50,8 +50,8 @@ N_SCALES
 Number of scales to use.
 1 - 6
 """
-N_SCALES = 1
-# N_SCALES = 5
+# N_SCALES = 1
+N_SCALES = 5
 
 """
 GRAY_INTENSITY    <- ONLY for get_pyramid_dataset
@@ -60,8 +60,8 @@ Whether to add a variable with the intensity of each pixel in the gray scale ima
 · True
 · False
 """
-GRAY_INTENSITY = False
-# GRAY_INTENSITY = True
+# GRAY_INTENSITY = False
+GRAY_INTENSITY = True
 
 """
 X2SCALE
@@ -70,7 +70,8 @@ Whether to add a scale with x2 resolution.
 · True
 · False
 """
-X2SCALE = False
+X2SCALE = True
+# X2SCALE = False
 
 """
 """
@@ -82,7 +83,7 @@ CONV_PATH = None if CONVOLUTION is None else ';'.join(CONVOLUTION.ravel().astype
 RADIUS = 1
 
 # Other parameters
-PLOT = True
+PLOT = False
 PLOT_LBP_LABEL = False
 N_JOBS = 1
 HEIGHT = 608

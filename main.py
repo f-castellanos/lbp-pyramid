@@ -4,18 +4,18 @@ import pickle
 import zipfile
 from pathlib import Path
 
+import cv2
+import lightgbm
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.naive_bayes import CategoricalNB, MultinomialNB
 # from xgboost import XGBClassifier
-from sklearn.metrics import f1_score, make_scorer
+from sklearn.metrics import f1_score
+from sklearn.naive_bayes import CategoricalNB, MultinomialNB
 
-import lightgbm
-
+import PARAMETERS
 from confusion_matrix_pretty_print import print_confusion_matrix
 from preprocess.preprocess import Preprocess
-import PARAMETERS
 
 
 class LGBMCategorical(lightgbm.LGBMClassifier):
@@ -200,7 +200,7 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     return df_train_temp, df_test_temp, y_train_temp, y_test_temp
 
 
-def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
+def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
@@ -260,6 +260,69 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
         else:
             flag = False
 
+        ################# TEST ##################
+
+        if recurrence:
+            from preprocess import lbp_scikit as lbp
+
+            def array_to_mat(arr, mask_mat):
+                mask_mat[mask_mat < 100] = 0
+                mask_mat[mask_mat >= 100] = arr.ravel()
+                return mask_mat
+
+            i = 0
+            label_predicted = np.array(clf.predict_proba(df_train)[:, 1] * 100, np.uint8)
+            df_train['recurrence_lbp'] = 0
+            df_train['recurrence_lbp_1'] = 0
+            df_train['recurrence_lbp_2'] = 0
+            df_train['recurrence_lbp_3'] = 0
+            df_train['recurrence_0'] = 0
+            df_train['recurrence_1'] = 0
+            df_train['recurrence_2'] = 0
+            preprocess = Preprocess(height=608, width=576)
+            masks_path = f'{parent_path}/dataset/training/mask/'
+            masks = sorted(os.listdir(masks_path))[:14]
+            for mask_path in masks:
+                mask = preprocess.read_img(masks_path + mask_path)
+                n_pixels_img = np.sum(mask > 100)
+                img_predictions = array_to_mat(label_predicted[i:i + n_pixels_img], mask.copy())
+                df_train['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
+                df_train['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
+                df_train['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
+                df_train['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
+                i += n_pixels_img
+            label_predicted = np.array(clf.predict_proba(df_test)[:, 1] * 100, np.uint8)
+            df_test['recurrence_lbp'] = 0
+            df_test['recurrence_lbp_1'] = 0
+            df_test['recurrence_lbp_2'] = 0
+            df_test['recurrence_lbp_3'] = 0
+            df_test['recurrence_0'] = 0
+            df_test['recurrence_1'] = 0
+            df_test['recurrence_2'] = 0
+            i = 0
+            masks = sorted(os.listdir(masks_path))[14:]
+            for mask_path in masks:
+                mask = preprocess.read_img(masks_path + mask_path)
+                n_pixels_img = np.sum(mask > 100)
+                img_predictions = array_to_mat(label_predicted[i:i + n_pixels_img], mask.copy())
+                df_test['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
+                df_test['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
+                df_test['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
+                df_test['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
+                i += n_pixels_img
+                # img_i = array_to_mat(np.arange(i, i + n_pixels_img), mask)
+            clf = init_clf_and_fit(df_train, y_train, lgb)
+            y_predicted = clf.predict(df_test)
+        # a = 0
+
+        #########################################
+
     if PARAMETERS.PLOT and flag:
         label_predicted = np.array(y_predicted)
         preprocess = Preprocess(height=608, width=576)
@@ -294,7 +357,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
 
 if __name__ == '__main__':
     if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
-        main(lgb='Num')
+        main(lgb='Num', recurrence=True)
     else:
         metrics = pd.DataFrame(columns=[
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',

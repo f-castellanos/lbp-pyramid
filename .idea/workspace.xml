@@ -24,11 +24,9 @@
   <component name="ChangeListManager">
     <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="Convolutions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/create_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lbm_fit.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/lbm_fit.pkl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/lbp_scikit.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/lbp_scikit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/radius.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/radius.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PARAMETERS.py" beforeDir="false" afterPath="$PROJECT_DIR$/PARAMETERS.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convolutions-radius.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -86,7 +84,7 @@
       <recent name="$PROJECT_DIR$/preprocess" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.create_db - grid">
+  <component name="RunManager" selected="Python.main">
     <configuration name="create_db - grid" type="PythonConfigurationType" factoryName="Python">
       <module name="lbp-pyramid" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -203,9 +201,9 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.main" />
         <item itemvalue="Python.create_db" />
         <item itemvalue="Python.lbp_scikit" />
-        <item itemvalue="Python.main" />
       </list>
     </recent_temporary>
   </component>
