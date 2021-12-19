@@ -200,7 +200,7 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     return df_train_temp, df_test_temp, y_train_temp, y_test_temp
 
 
-def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False):
+def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
@@ -286,13 +286,17 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
                 mask = preprocess.read_img(masks_path + mask_path)
                 n_pixels_img = np.sum(mask > 100)
                 img_predictions = array_to_mat(label_predicted[i:i + n_pixels_img], mask.copy())
-                df_train['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
-                df_train['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
-                df_train['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
-                df_train['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
-                df_train['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
-                df_train['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
-                df_train['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))))[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=2)[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=3)[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=4)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
+                df_train['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
+                df_train['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
+                df_train['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
                 i += n_pixels_img
             label_predicted = np.array(clf.predict_proba(df_test)[:, 1] * 100, np.uint8)
             df_test['recurrence_lbp'] = 0
@@ -308,18 +312,35 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
                 mask = preprocess.read_img(masks_path + mask_path)
                 n_pixels_img = np.sum(mask > 100)
                 img_predictions = array_to_mat(label_predicted[i:i + n_pixels_img], mask.copy())
-                df_test['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
-                df_test['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
-                df_test['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
-                df_test['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
-                df_test['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
-                df_test['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
-                df_test['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))))[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=2)[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=3)[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=4)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
+                df_test['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
+                df_test['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
+                df_test['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
                 i += n_pixels_img
                 # img_i = array_to_mat(np.arange(i, i + n_pixels_img), mask)
             clf = init_clf_and_fit(df_train, y_train, lgb)
             y_predicted = clf.predict(df_test)
-        # a = 0
+
+        if opt_threshold:
+            # https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/
+            y_predicted_proba = clf.predict_proba(df_train)[:, 1]
+            thresholds = np.arange(0, 1, 0.05)
+
+            scores = [f1_score(y_train, (y_predicted_proba >= t).astype('int')) for t in thresholds]
+            ix = np.argmax(scores)
+            print('Threshold=%.3f, F-Score=%.5f' % (thresholds[ix], scores[ix]))
+            # print(type(y_predicted))
+            y_predicted = (clf.predict_proba(df_test) >= thresholds[ix])[:, 1].astype('int')
+            # print(type(y_predicted))
+
+        a = 0
 
         #########################################
 
@@ -357,7 +378,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
 
 if __name__ == '__main__':
     if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
-        main(lgb='Num', recurrence=True)
+        main(lgb='Num', recurrence=True, opt_threshold=True)
     else:
         metrics = pd.DataFrame(columns=[
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',

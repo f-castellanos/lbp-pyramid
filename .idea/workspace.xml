@@ -24,9 +24,9 @@
   <component name="ChangeListManager">
     <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="Convolutions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PARAMETERS.py" beforeDir="false" afterPath="$PROJECT_DIR$/PARAMETERS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/convolutions-radius.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/convolutions-radius-recurrence.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/convolutions-radius-recurrence.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/recurrence.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/recurrence.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
