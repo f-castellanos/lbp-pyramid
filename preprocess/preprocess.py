@@ -60,6 +60,9 @@ class Preprocess:
         self.masks_path = f"{self.training_path}mask"
         if PARAMETERS.CONVOLUTION is None:
             self.preprocessed_path = f"{self.training_path}preprocessed"
+            if PARAMETERS.CHANNEL is not None:
+                channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+                self.preprocessed_path += f"_{channels_map[PARAMETERS.CHANNEL]}_channel"
         else:
             PARAMETERS.CONV_PATH = PARAMETERS.update_convolution_path(PARAMETERS)
             self.preprocessed_path = f"{self.training_path}preprocessed_convolutions/{PARAMETERS.CONV_PATH}"
@@ -83,6 +86,7 @@ class Preprocess:
             if PARAMETERS.CONVOLUTION is None:
                 img = Preprocess.read_img(f"{self.images_path}/{filename}")
                 img, mask = self.filter_by_mask(img, f"{self.masks_path}/{mask_filename}")
+                # if PARAMETERS.CHANNEL is None:
                 img = Preprocess.img_processing(img, PARAMETERS.PLOT)
                 img = self.rescale_add_borders(img)
                 for i in float(2) ** np.arange(-1, 6):
@@ -124,8 +128,7 @@ class Preprocess:
                 # Processing of radius 2-4
                 for r in range(2, 5):
                     # riu with r > 2 freezes the process
-                    if not os.path.isfile(f"{lbp_path}_{r}/{new_filename}") and lbp_operator != 'riu':
-                        # print(f"{lbp_path}_{r}/{new_filename}")
+                    if (not os.path.isfile(f"{lbp_path}_{r}/{new_filename}")) and lbp_operator != 'riu':
                         if not os.path.exists(f"{lbp_path}_{r}"):
                             os.makedirs(f"{lbp_path}_{r}")
                         if PARAMETERS.CONVOLUTION is None:
@@ -150,14 +153,17 @@ class Preprocess:
                     raise ParameterError(f"{getattr(PARAMETERS, k)} is not correctly defined")
 
     @staticmethod
-    def read_img(path, x2_enabled=True):
+    def read_img(path):
         """
         Reads a image given the path
         :param x2_enabled: Enables x2 rescaling
         :param path: Image path
         :return: Numpy array containing the information of the image
         """
-        img = np.asarray(Image.open(path).convert('L'))
+        if PARAMETERS.CHANNEL is None:
+            img = np.asarray(Image.open(path).convert('L'))
+        else:
+            img = np.asarray(Image.open(path).convert('RGB'))[:, :, PARAMETERS.CHANNEL]
         return img.copy()
 
     @staticmethod
@@ -180,8 +186,7 @@ class Preprocess:
         if algorithm is None:
             algorithm = PARAMETERS.INTERPOLATION_ALGORITHM
         if img.shape != dim:
-            return np.asarray(
-                im.resize((int(dim[0]), int(dim[1])), resample=resample_map[algorithm]))
+            return np.asarray(im.resize((int(dim[0]), int(dim[1])), resample=resample_map[algorithm]))
         else:
             return img
 

@@ -82,6 +82,9 @@ CONVOLUTION = None
 CONV_PATH = None if CONVOLUTION is None else ';'.join(CONVOLUTION.ravel().astype(str))
 RADIUS = 1
 
+
+CHANNEL = None
+
 # Other parameters
 PLOT = False
 PLOT_LBP_LABEL = False

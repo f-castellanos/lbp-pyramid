@@ -20,34 +20,53 @@ from preprocess.preprocess import Preprocess
 
 class LGBMCategorical(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('category')
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('category')
         return super().predict(x, *args, **kwargs)
+
+    def predict_proba(self, x, *args, **kwargs):
+        x = x.copy()
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('category')
+        return super().predict_proba(x, *args, **kwargs)
 
 
 class LGBMNumerical(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('float')
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('float')
         return super().predict(x, *args, **kwargs)
+
+    def predict_proba(self, x, *args, **kwargs):
+        x = x.copy()
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('float')
+        return super().predict_proba(x, *args, **kwargs)
 
 
 class LGBMCatNum(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             if len(np.unique(x[col])) < 260:
@@ -57,6 +76,7 @@ class LGBMCatNum(lightgbm.LGBMClassifier):
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             if len(np.unique(x[col])) < 260:
@@ -65,8 +85,19 @@ class LGBMCatNum(lightgbm.LGBMClassifier):
                 x[col] = x[col].astype('float')
         return super().predict(x, *args, **kwargs)
 
+    def predict_proba(self, x, *args, **kwargs):
+        x = x.copy()
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            if len(np.unique(x[col])) < 260:
+                x[col] = x[col].astype('category')
+            else:
+                x[col] = x[col].astype('float')
+        return super().predict_proba(x, *args, **kwargs)
+
 
 def init_clf_and_fit(df, y, lgb=''):
+    features = tuple(df.columns)
     if lgb == 'Num':
         # clf = XGBClassifier(n_jobs=-1, objective='binary:logistic', enable_categorical=True)
         # f1 = make_scorer(f1_score, average='macro')
@@ -141,8 +172,8 @@ def init_clf_and_fit(df, y, lgb=''):
         # if 'Original' in df:
         #     clf = RandomForestClassifier(estimators=[('multi', multi_clf), ('cat', clf)])
         clf.fit(df, y)
-        with open(f"lbm_fit.pkl", 'wb') as f:
-            pickle.dump(clf, f)
+    with open(f"lbm_fit.pkl", 'wb') as f:
+        pickle.dump({'clf': clf, 'features': features}, f)
     return clf
 
 
@@ -165,15 +196,32 @@ def ensemble_prediction(classifiers, dfs_test):
     return y_predictions, y_actual
 
 
+def get_channel_features(parent_path):
+    lbp_method = PARAMETERS.LBP_METHOD
+    PARAMETERS.LBP_METHOD = 'default'
+    PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+    df_train = pd.DataFrame()
+    df_test = pd.DataFrame()
+    channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+    for channel in range(3):
+        PARAMETERS.CHANNEL = channel
+        df_train_temp, df_test_temp, _, __ = load_datasets_for_lbp_operator(parent_path)
+        df_train_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_train_temp.columns]
+        df_test_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_test_temp.columns]
+        df_train = pd.concat([df_train, df_train_temp], axis=1)
+        df_test = pd.concat([df_test, df_test_temp], axis=1)
+    PARAMETERS.CHANNEL = None
+    PARAMETERS.LBP_METHOD = lbp_method
+    PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+    return df_train, df_test
+
+
 def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     # Database reading
     db_folder = 'DB'
-    # if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
-    #     db_folder = 'DB'
-    # elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
-    #     db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
-    # else:
-    #     db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
+    if PARAMETERS.CHANNEL is not None:
+        channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+        db_folder = f"DB/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
     db_path = f"{parent_path}/{db_folder}"
     train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
     test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
@@ -200,18 +248,12 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     return df_train_temp, df_test_temp, y_train_temp, y_test_temp
 
 
-def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False):
+def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False, add_channels=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
         # Database reading
         db_folder = 'DB'
-        # if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
-        #     db_folder = 'DB'
-        # elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
-        #     db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
-        # else:
-        #     db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
         db_path = f"{parent_path}/{db_folder}"
         train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
         test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
@@ -249,6 +291,11 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
                     df_test = pd.concat([df_test, temp_datasets[1]], axis=1)
         else:
             df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
+
+        if add_channels:
+            df_train_channels, df_test_channels = get_channel_features(parent_path)
+            df_train = pd.concat([df_train, df_train_channels], axis=1)
+            df_test = pd.concat([df_test, df_test_channels], axis=1)
 
         if extra_features is not None:
             df_train = pd.concat([df_train, extra_features['train']], axis=1)
@@ -378,7 +425,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
 
 if __name__ == '__main__':
     if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
-        main(lgb='Num', recurrence=True, opt_threshold=True)
+        main(lgb='Num', recurrence=True, opt_threshold=False, all_lbp=True, add_channels=True)
     else:
         metrics = pd.DataFrame(columns=[
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',
