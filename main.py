@@ -4,51 +4,71 @@ import pickle
 import zipfile
 from pathlib import Path
 
+import cv2
+import lightgbm
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.naive_bayes import CategoricalNB, MultinomialNB
 # https://ichi.pro/es/por-que-y-como-utilizar-los-algoritmos-naive-bayes-en-una-industria-regulada-con-sklearn-python-codigo-241721569620687  noqa
 # from xgboost import XGBClassifier
-from sklearn.metrics import f1_score, make_scorer
+from sklearn.metrics import f1_score
+from sklearn.naive_bayes import CategoricalNB, MultinomialNB
 
-import lightgbm
-
+import PARAMETERS
 from confusion_matrix_pretty_print import print_confusion_matrix
 from preprocess.preprocess import Preprocess
-import PARAMETERS
 
 
 class LGBMCategorical(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('category')
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('category')
         return super().predict(x, *args, **kwargs)
+
+    def predict_proba(self, x, *args, **kwargs):
+        x = x.copy()
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('category')
+        return super().predict_proba(x, *args, **kwargs)
 
 
 class LGBMNumerical(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('float')
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('float')
         return super().predict(x, *args, **kwargs)
+
+    def predict_proba(self, x, *args, **kwargs):
+        x = x.copy()
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            x[col] = x[col].astype('float')
+        return super().predict_proba(x, *args, **kwargs)
 
 
 class LGBMCatNum(lightgbm.LGBMClassifier):
     def fit(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             if len(np.unique(x[col])) < 260:
@@ -58,6 +78,7 @@ class LGBMCatNum(lightgbm.LGBMClassifier):
         return super().fit(x, *args, **kwargs)
 
     def predict(self, x, *args, **kwargs):
+        x = x.copy()
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             if len(np.unique(x[col])) < 260:
@@ -66,8 +87,19 @@ class LGBMCatNum(lightgbm.LGBMClassifier):
                 x[col] = x[col].astype('float')
         return super().predict(x, *args, **kwargs)
 
+    def predict_proba(self, x, *args, **kwargs):
+        x = x.copy()
+        x.columns = [str(col).replace(':', '') for col in x.columns]
+        for col in x.columns:
+            if len(np.unique(x[col])) < 260:
+                x[col] = x[col].astype('category')
+            else:
+                x[col] = x[col].astype('float')
+        return super().predict_proba(x, *args, **kwargs)
+
 
 def init_clf_and_fit(df, y, lgb=''):
+    features = tuple(df.columns)
     if lgb == 'Num':
         # clf = XGBClassifier(n_jobs=-1, objective='binary:logistic', enable_categorical=True)
         # f1 = make_scorer(f1_score, average='macro')
@@ -142,8 +174,8 @@ def init_clf_and_fit(df, y, lgb=''):
         # if 'Original' in df:
         #     clf = RandomForestClassifier(estimators=[('multi', multi_clf), ('cat', clf)])
         clf.fit(df, y)
-        with open(f"lbm_fit.pkl", 'wb') as f:
-            pickle.dump(clf, f)
+    with open(f"lbm_fit.pkl", 'wb') as f:
+        pickle.dump({'clf': clf, 'features': features}, f)
     return clf
 
 
@@ -166,15 +198,32 @@ def ensemble_prediction(classifiers, dfs_test):
     return y_predictions, y_actual
 
 
+def get_channel_features(parent_path):
+    lbp_method = PARAMETERS.LBP_METHOD
+    PARAMETERS.LBP_METHOD = 'default'
+    PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+    df_train = pd.DataFrame()
+    df_test = pd.DataFrame()
+    channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+    for channel in range(3):
+        PARAMETERS.CHANNEL = channel
+        df_train_temp, df_test_temp, _, __ = load_datasets_for_lbp_operator(parent_path)
+        df_train_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_train_temp.columns]
+        df_test_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_test_temp.columns]
+        df_train = pd.concat([df_train, df_train_temp], axis=1)
+        df_test = pd.concat([df_test, df_test_temp], axis=1)
+    PARAMETERS.CHANNEL = None
+    PARAMETERS.LBP_METHOD = lbp_method
+    PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+    return df_train, df_test
+
+
 def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     # Database reading
     db_folder = 'DB'
-    # if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
-    #     db_folder = 'DB'
-    # elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
-    #     db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
-    # else:
-    #     db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
+    if PARAMETERS.CHANNEL is not None:
+        channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+        db_folder = f"DB/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
     db_path = f"{parent_path}/{db_folder}"
     train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
     test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
@@ -201,18 +250,12 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     return df_train_temp, df_test_temp, y_train_temp, y_test_temp
 
 
-def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
+def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False, add_channels=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
         # Database reading
         db_folder = 'DB'
-        # if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
-        #     db_folder = 'DB'
-        # elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
-        #     db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
-        # else:
-        #     db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONVOLUTION}'
         db_path = f"{parent_path}/{db_folder}"
         train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
         test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
@@ -251,6 +294,11 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
         else:
             df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
 
+        if add_channels:
+            df_train_channels, df_test_channels = get_channel_features(parent_path)
+            df_train = pd.concat([df_train, df_train_channels], axis=1)
+            df_test = pd.concat([df_test, df_test_channels], axis=1)
+
         if extra_features is not None:
             df_train = pd.concat([df_train, extra_features['train']], axis=1)
             df_test = pd.concat([df_test, extra_features['test']], axis=1)
@@ -260,6 +308,90 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
             y_predicted = clf.predict(df_test)
         else:
             flag = False
+
+        ################# TEST ##################
+
+        if recurrence:
+            from preprocess import lbp_scikit as lbp
+
+            def array_to_mat(arr, mask_mat):
+                mask_mat[mask_mat < 100] = 0
+                mask_mat[mask_mat >= 100] = arr.ravel()
+                return mask_mat
+
+            i = 0
+            label_predicted = np.array(clf.predict_proba(df_train)[:, 1] * 100, np.uint8)
+            df_train['recurrence_lbp'] = 0
+            df_train['recurrence_lbp_1'] = 0
+            df_train['recurrence_lbp_2'] = 0
+            df_train['recurrence_lbp_3'] = 0
+            df_train['recurrence_0'] = 0
+            df_train['recurrence_1'] = 0
+            df_train['recurrence_2'] = 0
+            preprocess = Preprocess(height=608, width=576)
+            masks_path = f'{parent_path}/dataset/training/mask/'
+            masks = sorted(os.listdir(masks_path))[:14]
+            for mask_path in masks:
+                mask = preprocess.read_img(masks_path + mask_path)
+                n_pixels_img = np.sum(mask > 100)
+                img_predictions = array_to_mat(label_predicted[i:i + n_pixels_img], mask.copy())
+                df_train['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))))[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=2)[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=3)[mask > 100].ravel()  # noqa
+                df_train['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=4)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
+                # df_train['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
+                df_train['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
+                df_train['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
+                df_train['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
+                i += n_pixels_img
+            label_predicted = np.array(clf.predict_proba(df_test)[:, 1] * 100, np.uint8)
+            df_test['recurrence_lbp'] = 0
+            df_test['recurrence_lbp_1'] = 0
+            df_test['recurrence_lbp_2'] = 0
+            df_test['recurrence_lbp_3'] = 0
+            df_test['recurrence_0'] = 0
+            df_test['recurrence_1'] = 0
+            df_test['recurrence_2'] = 0
+            i = 0
+            masks = sorted(os.listdir(masks_path))[14:]
+            for mask_path in masks:
+                mask = preprocess.read_img(masks_path + mask_path)
+                n_pixels_img = np.sum(mask > 100)
+                img_predictions = array_to_mat(label_predicted[i:i + n_pixels_img], mask.copy())
+                df_test['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))))[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=2)[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=3)[mask > 100].ravel()  # noqa
+                df_test['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(cv2.filter2D(img_predictions/10, -1, np.ones((3, 3))), r=4)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp_1'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=2)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp_2'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=3)[mask > 100].ravel()  # noqa
+                # df_test['recurrence_lbp_3'].iloc[i:i + n_pixels_img] = lbp.lbp(img_predictions, r=4)[mask > 100].ravel()  # noqa
+                df_test['recurrence_0'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((3, 3)))[mask > 100].ravel()  # noqa
+                df_test['recurrence_1'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((5, 5)))[mask > 100].ravel()  # noqa
+                df_test['recurrence_2'].iloc[i:i + n_pixels_img] = cv2.filter2D(img_predictions/10, -1, np.ones((10, 10)))[mask > 100].ravel()  # noqa
+                i += n_pixels_img
+                # img_i = array_to_mat(np.arange(i, i + n_pixels_img), mask)
+            clf = init_clf_and_fit(df_train, y_train, lgb)
+            y_predicted = clf.predict(df_test)
+
+        if opt_threshold:
+            # https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/
+            y_predicted_proba = clf.predict_proba(df_train)[:, 1]
+            thresholds = np.arange(0, 1, 0.05)
+
+            scores = [f1_score(y_train, (y_predicted_proba >= t).astype('int')) for t in thresholds]
+            ix = np.argmax(scores)
+            print('Threshold=%.3f, F-Score=%.5f' % (thresholds[ix], scores[ix]))
+            # print(type(y_predicted))
+            y_predicted = (clf.predict_proba(df_test) >= thresholds[ix])[:, 1].astype('int')
+            # print(type(y_predicted))
+
+        a = 0
+
+        #########################################
 
     if PARAMETERS.PLOT and flag:
         label_predicted = np.array(y_predicted)
@@ -295,7 +427,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False):
 
 if __name__ == '__main__':
     if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
-        main(lgb='Num')
+        main(lgb='Num', recurrence=True, opt_threshold=False, all_lbp=True, add_channels=True)
     else:
         metrics = pd.DataFrame(columns=[
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',

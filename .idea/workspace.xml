@@ -22,9 +22,25 @@
     <select />
   </component>
   <component name="ChangeListManager">
+<<<<<<< HEAD
     <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="Radius">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+=======
+    <list default="true" id="2f89fee2-bdca-4fbc-ba70-ae2ce2ff68f6" name="Default Changelist" comment="rgb - feature importance">
+      <change afterPath="$PROJECT_DIR$/channels.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/optimal_results.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PARAMETERS.py" beforeDir="false" afterPath="$PROJECT_DIR$/PARAMETERS.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convolutions-radius-recurrence.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/convolutions.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/convolutions.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/create_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lbm_fit.pkl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/radius.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/radius.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/recurrence.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/recurrence.ipynb" afterDir="false" />
+>>>>>>> origin/iterations
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,7 +98,7 @@
       <recent name="$PROJECT_DIR$/preprocess" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.create_db - grid">
+  <component name="RunManager" selected="Python.main">
     <configuration name="create_db - grid" type="PythonConfigurationType" factoryName="Python">
       <module name="lbp-pyramid" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -199,9 +215,9 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.main" />
         <item itemvalue="Python.create_db" />
         <item itemvalue="Python.lbp_scikit" />
-        <item itemvalue="Python.main" />
       </list>
     </recent_temporary>
   </component>
@@ -515,6 +531,7 @@
       <option name="project" value="LOCAL" />
       <updated>1639306607775</updated>
     </task>
+<<<<<<< HEAD
     <task id="LOCAL-00044" summary="Radius">
       <created>1639752989540</created>
       <option name="number" value="00044" />
@@ -528,6 +545,21 @@
       <option name="presentableId" value="LOCAL-00045" />
       <option name="project" value="LOCAL" />
       <updated>1639753001012</updated>
+=======
+    <task id="LOCAL-00044" summary="recurrence">
+      <created>1639909619113</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1639909619113</updated>
+    </task>
+    <task id="LOCAL-00045" summary="rgb - feature importance">
+      <created>1640770437904</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1640770437904</updated>
+>>>>>>> origin/iterations
     </task>
     <option name="localTasksCounter" value="46" />
     <servers />
@@ -544,8 +576,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="LBP applied with mask" />
-    <MESSAGE value="Label plotting" />
     <MESSAGE value="Label + LBP plotting" />
     <MESSAGE value="DDBB creation" />
     <MESSAGE value="First Model" />
@@ -568,8 +598,14 @@
     <MESSAGE value="Fix one hot encode" />
     <MESSAGE value="LGBM classifier fix" />
     <MESSAGE value="Convolutions" />
+<<<<<<< HEAD
     <MESSAGE value="Radius" />
     <option name="LAST_COMMIT_MESSAGE" value="Radius" />
+=======
+    <MESSAGE value="recurrence" />
+    <MESSAGE value="rgb - feature importance" />
+    <option name="LAST_COMMIT_MESSAGE" value="rgb - feature importance" />
+>>>>>>> origin/iterations
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

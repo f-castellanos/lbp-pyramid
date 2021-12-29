@@ -55,10 +55,13 @@ def main(single_exec=False):
     preprocess.compute_preprocessing(images, masks, path)
 
     # Train - Test dataframes
-    if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1:
+    if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1 and PARAMETERS.CHANNEL is None:
         db_folder = 'DB'
     elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
         db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
+    elif PARAMETERS.CHANNEL is not None:
+        channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+        db_folder = f"DB/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
     else:
         db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONV_PATH}'
     db_path = f"{parent_path}/{db_folder}"
