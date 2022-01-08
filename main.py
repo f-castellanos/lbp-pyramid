@@ -13,7 +13,6 @@ from sklearn.naive_bayes import CategoricalNB, MultinomialNB
 # https://ichi.pro/es/por-que-y-como-utilizar-los-algoritmos-naive-bayes-en-una-industria-regulada-con-sklearn-python-codigo-241721569620687  noqa
 # from xgboost import XGBClassifier
 from sklearn.metrics import f1_score
-from sklearn.naive_bayes import CategoricalNB, MultinomialNB
 
 import PARAMETERS
 from confusion_matrix_pretty_print import print_confusion_matrix
@@ -98,7 +97,7 @@ class LGBMCatNum(lightgbm.LGBMClassifier):
         return super().predict_proba(x, *args, **kwargs)
 
 
-def init_clf_and_fit(df, y, lgb=''):
+def init_clf_and_fit(df, y, lgb='', parent_path='.'):
     features = tuple(df.columns)
     if lgb == 'Num':
         # clf = XGBClassifier(n_jobs=-1, objective='binary:logistic', enable_categorical=True)
@@ -174,7 +173,7 @@ def init_clf_and_fit(df, y, lgb=''):
         # if 'Original' in df:
         #     clf = RandomForestClassifier(estimators=[('multi', multi_clf), ('cat', clf)])
         clf.fit(df, y)
-    with open(f"lbm_fit.pkl", 'wb') as f:
+    with open(f"{parent_path}/lbm_fit{PARAMETERS.MODEL_NAME}.pkl", 'wb') as f:
         pickle.dump({'clf': clf, 'features': features}, f)
     return clf
 
@@ -304,7 +303,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             df_test = pd.concat([df_test, extra_features['test']], axis=1)
 
         if df_train.shape[1] > 0:
-            clf = init_clf_and_fit(df_train, y_train, lgb)
+            clf = init_clf_and_fit(df_train, y_train, lgb, parent_path + '/models')
             y_predicted = clf.predict(df_test)
         else:
             flag = False

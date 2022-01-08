@@ -116,5 +116,3 @@ if __name__ == '__main__':
                                             f"_gray-intensity-{PARAMETERS.GRAY_INTENSITY}"
             if j > 0 and not (PARAMETERS.N_SCALES == 1 and PARAMETERS.X2SCALE):
                 main()
-
-# Saltados: 98, 100, 101, 102, 104, 105, 106, 107

@@ -20,8 +20,8 @@ class ParameterError(Exception):
 
 
 VALID_PARAMETERS = {
-    # 'LBP_METHOD': ['var'],
-    'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
+    'LBP_METHOD': ['var'],
+    # 'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
     'METHOD': ['get_pyramid_dataset'],
     # 'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
     'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
@@ -370,7 +370,7 @@ class Preprocess:
 
     # Gold Standard
     def get_label(self, path):
-        img = self.read_img(path, x2_enabled=False)
+        img = self.read_img(path)
         img[img < self.label_threshold] = 0
         img[img >= self.label_threshold] = 1
         # if PARAMETERS.X2SCALE:
@@ -443,12 +443,14 @@ class Preprocess:
         scale_names = ['1:1', '1:2', '1:4', '1:8', '1:16', '1:32'][:(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE))]
         if PARAMETERS.X2SCALE:
             scale_names += ['2:1_1', '2:1_2', '2:1_3', '2:1_4']
-            lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES + 3), dtype='uint8')
+            # lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES + 3), dtype='uint8')
+            lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES + 3))
             with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_0.5.pkl", 'rb') as f:
                 img_lbp = pickle.load(f)
             lbp_matrix[:, -4:] = Preprocess.undo_repeat_pixels(img_lbp)
         else:
-            lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES), dtype='uint8')
+            # lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES), dtype='uint8')
+            lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES))
         '''
         TODO: si es 1:0.5 -> hacer operación inversa a repeat_prixels (matrix 4x2x2) para generar 4 columnas en la
         BBDD porque sino se estarían haciendo 4 predicciones para un mismo pixel (y así se tiene más info para el
@@ -496,7 +498,8 @@ class Preprocess:
                 lbp_matrix = lbp_matrix[sample, :]
 
             if PARAMETERS.GRAY_INTENSITY:
-                df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names + ['label'], dtype='uint8')
+                df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names + ['label'])
+                # df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names + ['label'], dtype='uint8')
                 if PARAMETERS.ENCODING == 'one-hot':
                     df = pd.concat(
                         (df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:-1].copy()), df.loc[:, 'label']),
@@ -506,7 +509,8 @@ class Preprocess:
                     for col in df.iloc[:, :-1].columns:
                         df[col] = df[col].astype('category')
             else:
-                df = pd.DataFrame(lbp_matrix, columns=scale_names + ['label'], dtype='uint8')
+                df = pd.DataFrame(lbp_matrix, columns=scale_names + ['label'])
+                # df = pd.DataFrame(lbp_matrix, columns=scale_names + ['label'], dtype='uint8')
                 if PARAMETERS.ENCODING == 'one-hot':
                     df = pd.concat(
                         (self.one_hot_encode(df.iloc[:, :-1].copy()), df.loc[:, 'label']),
@@ -517,7 +521,8 @@ class Preprocess:
                         df[col] = df[col].astype('category')
         else:
             if PARAMETERS.GRAY_INTENSITY:
-                df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names, dtype='uint8')
+                df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names)
+                # df = pd.DataFrame(lbp_matrix, columns=['Original'] + scale_names, dtype='uint8')
                 if PARAMETERS.ENCODING == 'one-hot':
                     df = pd.concat(
                         (df.loc[:, 'Original'], self.one_hot_encode(df.iloc[:, 1:].copy())),
@@ -527,7 +532,8 @@ class Preprocess:
                     for col in df.iloc[:, :-1].columns:
                         df[col] = df[col].astype('category')
             else:
-                df = pd.DataFrame(lbp_matrix, columns=scale_names, dtype='uint8')
+                df = pd.DataFrame(lbp_matrix, columns=scale_names)
+                # df = pd.DataFrame(lbp_matrix, columns=scale_names, dtype='uint8')
                 if PARAMETERS.ENCODING == 'one-hot':
                     df = self.one_hot_encode(df.iloc[:, 1:-1].copy())
                 elif PARAMETERS.ENCODING == 'categorical':

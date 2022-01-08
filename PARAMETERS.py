@@ -11,8 +11,8 @@ Defines the LBP algorithm version to be used.
 · var: rotation invariant variance measures of the contrast of local image texture which is rotation but not gray scale invariant.
 
 """  # noqa
-# LBP_METHOD = 'riu2'
-LBP_METHOD = 'default'
+LBP_METHOD = 'var'
+# LBP_METHOD = 'default'
 
 """
 METHOD
@@ -86,6 +86,7 @@ RADIUS = 1
 CHANNEL = None
 
 # Other parameters
+MODEL_NAME = ''
 PLOT = False
 PLOT_LBP_LABEL = False
 N_JOBS = 1
