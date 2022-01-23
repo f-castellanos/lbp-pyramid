@@ -20,8 +20,8 @@ class ParameterError(Exception):
 
 
 VALID_PARAMETERS = {
-    'LBP_METHOD': ['var'],
-    # 'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
+    # 'LBP_METHOD': ['var'],
+    'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
     'METHOD': ['get_pyramid_dataset'],
     # 'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
     'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
