@@ -97,6 +97,12 @@ class LGBMCatNum(lightgbm.LGBMClassifier):
         return super().predict_proba(x, *args, **kwargs)
 
 
+def lgb_f1_score(y_hat, data):
+    y_true = data.get_label()
+    y_hat = np.round(y_hat) # scikits f1 doesn't like probabilities
+    return 'f1', f1_score(y_true, y_hat), True
+
+
 def init_clf_and_fit(df, y, lgb='', parent_path='.'):
     features = tuple(df.columns)
     if lgb == 'Num':
@@ -121,10 +127,11 @@ def init_clf_and_fit(df, y, lgb='', parent_path='.'):
             # n_estimators=1000,
             colsample_bytree=0.9,
             subsample=0.7,
-            learning_rate=0.5
+            learning_rate=0.5,
+            force_row_wise=True
         )
         # clf = GridSearchCV(lgb_clf, parameters, n_jobs=-1, scoring=f1)
-        clf.fit(df, y, eval_metric=['auc'])
+        clf.fit(df, y, eval_metric=lgb_f1_score)
     elif lgb == 'Cat':
         clf = LGBMCategorical(
             num_leaves=50,
@@ -136,9 +143,10 @@ def init_clf_and_fit(df, y, lgb='', parent_path='.'):
             # n_estimators=1000,
             colsample_bytree=0.9,
             subsample=0.7,
-            learning_rate=0.5
+            learning_rate=0.5,
+            force_row_wise=True
         )
-        clf.fit(df, y, eval_metric=['auc'])
+        clf.fit(df, y, eval_metric=lgb_f1_score)
     elif lgb == 'CatNum':
         clf = LGBMCatNum(
             num_leaves=50,
@@ -150,9 +158,10 @@ def init_clf_and_fit(df, y, lgb='', parent_path='.'):
             # n_estimators=1000,
             colsample_bytree=0.9,
             subsample=0.7,
-            learning_rate=0.5
+            learning_rate=0.5,
+            force_row_wise=True
         )
-        clf.fit(df, y, eval_metric=['auc'])
+        clf.fit(df, y, eval_metric=lgb_f1_score)
     else:
         # if 'Original' in df:
         #     multi_clf = MultinomialNB(fit_prior=True)
@@ -197,32 +206,51 @@ def ensemble_prediction(classifiers, dfs_test):
     return y_predictions, y_actual
 
 
-def get_channel_features(parent_path):
+def get_channel_features(parent_path, lbp_version='default', channels=(0, 1, 2)):
     lbp_method = PARAMETERS.LBP_METHOD
-    PARAMETERS.LBP_METHOD = 'default'
-    PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
-    df_train = pd.DataFrame()
-    df_test = pd.DataFrame()
-    channels_map = {0: 'red', 1: 'green', 2: 'blue'}
-    for channel in range(3):
-        PARAMETERS.CHANNEL = channel
-        df_train_temp, df_test_temp, _, __ = load_datasets_for_lbp_operator(parent_path)
-        df_train_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_train_temp.columns]
-        df_test_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_test_temp.columns]
-        df_train = pd.concat([df_train, df_train_temp], axis=1)
-        df_test = pd.concat([df_test, df_test_temp], axis=1)
+    if isinstance(lbp_version, str):
+        PARAMETERS.LBP_METHOD = lbp_version
+        PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+        df_train = pd.DataFrame()
+        df_test = pd.DataFrame()
+        channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+        for channel in channels:
+            PARAMETERS.CHANNEL = channel
+            df_train_temp, df_test_temp, _, __ = load_datasets_for_lbp_operator(parent_path)
+            df_train_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_train_temp.columns]
+            df_test_temp.columns = [f"{channels_map[PARAMETERS.CHANNEL]}_{c}" for c in df_test_temp.columns]
+            df_train = pd.concat([df_train, df_train_temp], axis=1)
+            df_test = pd.concat([df_test, df_test_temp], axis=1)
+    else:
+        df_train = pd.DataFrame()
+        df_test = pd.DataFrame()
+        for lbp_op in lbp_version:
+            df_train_temp, df_test_temp = get_channel_features(parent_path, lbp_version=lbp_op, channels=channels)
+            cols_to_drop = []
+            for col in df_train_temp.columns:
+                if col in list(df_train.columns):
+                    cols_to_drop.append(col)
+            df_train_temp = df_train_temp.drop(columns=cols_to_drop)
+            df_test_temp = df_test_temp.drop(columns=cols_to_drop)
+            df_train = pd.concat([df_train, df_train_temp], axis=1)
+            df_test = pd.concat([df_test, df_test_temp], axis=1)
     PARAMETERS.CHANNEL = None
     PARAMETERS.LBP_METHOD = lbp_method
     PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
     return df_train, df_test
 
 
+def get_labels(parent_path):
+    _, __, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
+    return y_train, y_test
+
+
 def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     # Database reading
-    db_folder = 'DB'
+    db_folder = f'DB/{PARAMETERS.DATASET}'
     if PARAMETERS.CHANNEL is not None:
         channels_map = {0: 'red', 1: 'green', 2: 'blue'}
-        db_folder = f"DB/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
+        db_folder = f"DB/{PARAMETERS.DATASET}/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
     db_path = f"{parent_path}/{db_folder}"
     train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
     test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
@@ -249,13 +277,13 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     return df_train_temp, df_test_temp, y_train_temp, y_test_temp
 
 
-def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False, add_channels=False):
+def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False, add_channels=False, cols_to_remove=None, features=None, channels=None):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
         # Database reading
         db_folder = 'DB'
-        db_path = f"{parent_path}/{db_folder}"
+        db_path = f"{parent_path}/{db_folder}/{PARAMETERS.DATASET}"
         train_file_name = f"{db_path}/train_train_{PARAMETERS.FILE_EXTENSION}"
         test_file_name = f"{db_path}/train_test_{PARAMETERS.FILE_EXTENSION}"
         with zipfile.ZipFile(f'{train_file_name}.zip', 'r') as zip_ref:
@@ -278,31 +306,55 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
         y_test = np.concatenate([y_predicted_test_pic[1] for y_predicted_test_pic in y_predicted_test_list])
 
     else:
-        df_train = None
-        df_test = None
-        if all_lbp:
-            for i, lbp_operator in enumerate(['default', 'riu', 'riu2', 'nriuniform', 'var']):
-                PARAMETERS.LBP_METHOD = lbp_operator
-                PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
-                if i == 0:
-                    df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
+        if features is None:
+            df_train = None
+            df_test = None
+            if isinstance(all_lbp, list):
+                if channels is None:
+                    for i, lbp_operator in enumerate(all_lbp):
+                        PARAMETERS.LBP_METHOD = lbp_operator
+                        PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+                        if i == 0:
+                            df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
+                        else:
+                            temp_datasets = load_datasets_for_lbp_operator(parent_path, discard_columns=True)
+                            df_train = pd.concat([df_train, temp_datasets[0]], axis=1)
+                            df_test = pd.concat([df_test, temp_datasets[1]], axis=1)
                 else:
-                    temp_datasets = load_datasets_for_lbp_operator(parent_path, discard_columns=True)
-                    df_train = pd.concat([df_train, temp_datasets[0]], axis=1)
-                    df_test = pd.concat([df_test, temp_datasets[1]], axis=1)
+                    df_train, df_test = get_channel_features(parent_path, lbp_version=all_lbp)
+                    y_train, y_test = get_labels(parent_path)
+            elif all_lbp:
+                for i, lbp_operator in enumerate(['default', 'riu', 'riu2', 'nriuniform', 'var']):
+                    PARAMETERS.LBP_METHOD = lbp_operator
+                    PARAMETERS.FILE_EXTENSION = PARAMETERS.update_file_extension(PARAMETERS)
+                    if i == 0:
+                        df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
+                    else:
+                        temp_datasets = load_datasets_for_lbp_operator(parent_path, discard_columns=True)
+                        df_train = pd.concat([df_train, temp_datasets[0]], axis=1)
+                        df_test = pd.concat([df_test, temp_datasets[1]], axis=1)
+            else:
+                df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
+
+            if add_channels:
+                df_train_channels, df_test_channels = get_channel_features(parent_path)
+                df_train = pd.concat([df_train, df_train_channels], axis=1)
+                df_test = pd.concat([df_test, df_test_channels], axis=1)
+
+            if extra_features is not None:
+                df_train = pd.concat([df_train, extra_features['train']], axis=1)
+                df_test = pd.concat([df_test, extra_features['test']], axis=1)
+
         else:
-            df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
-
-        if add_channels:
-            df_train_channels, df_test_channels = get_channel_features(parent_path)
-            df_train = pd.concat([df_train, df_train_channels], axis=1)
-            df_test = pd.concat([df_test, df_test_channels], axis=1)
-
-        if extra_features is not None:
-            df_train = pd.concat([df_train, extra_features['train']], axis=1)
-            df_test = pd.concat([df_test, extra_features['test']], axis=1)
+            df_train = features['x_train']
+            y_train = features['y_train']
+            df_test = features['x_test']
+            y_test = features['y_test']
 
         if df_train.shape[1] > 0:
+            if cols_to_remove is not None:
+                df_train = df_train.drop(columns=cols_to_remove)
+                df_test = df_test.drop(columns=cols_to_remove)
             clf = init_clf_and_fit(df_train, y_train, lgb, parent_path + '/models')
             y_predicted = clf.predict(df_test)
         else:
@@ -328,7 +380,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             df_train['recurrence_1'] = 0
             df_train['recurrence_2'] = 0
             preprocess = Preprocess(height=608, width=576)
-            masks_path = f'{parent_path}/dataset/training/mask/'
+            masks_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/mask/'
             masks = sorted(os.listdir(masks_path))[:14]
             for mask_path in masks:
                 mask = preprocess.read_img(masks_path + mask_path)
@@ -395,9 +447,9 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
     if PARAMETERS.PLOT and flag:
         label_predicted = np.array(y_predicted)
         preprocess = Preprocess(height=608, width=576)
-        images_path = f'{parent_path}/dataset/training/images/'
+        images_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/images/'
         images = sorted(os.listdir(images_path))[14:]
-        masks_path = f'{parent_path}/dataset/training/mask/'
+        masks_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/mask/'
         masks = sorted(os.listdir(masks_path))[14:]
         for image_path, mask_path in zip(images, masks):
             img = preprocess.read_img(images_path + image_path).ravel()
@@ -426,7 +478,8 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
 
 if __name__ == '__main__':
     if 'GRID_SEARCH' not in os.environ or os.environ['GRID_SEARCH'] != 'TRUE':
-        main(lgb='Num', recurrence=True, opt_threshold=False, all_lbp=True, add_channels=True)
+        main(lgb='Num', opt_threshold=False, all_lbp=True, add_channels=False)
+        # main(lgb='Num', recurrence=True, opt_threshold=False, all_lbp=True, add_channels=True)
     else:
         metrics = pd.DataFrame(columns=[
                     'LBP', 'Method', 'Interpolation', 'Balance', 'n_scales', 'x2', 'Gray Intensity',

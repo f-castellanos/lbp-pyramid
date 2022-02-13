@@ -41,8 +41,8 @@ class Preprocess:
         self.height = height
         self.width = width
         self.balance = balance
-        self.original_height = 584
-        self.original_width = 565
+        self.original_height = {'DRIVE': 584, 'CHASE': 960, 'STARE': 605}[PARAMETERS.DATASET]
+        self.original_width = {'DRIVE': 565, 'CHASE': 999, 'STARE': 700}[PARAMETERS.DATASET]
         self.mask_threshold = mask_threshold
         self.label_threshold = label_threshold
         self.lbp_radius = lbp_radius
@@ -55,7 +55,7 @@ class Preprocess:
         self.original_preprocessed_path = None
 
     def compute_preprocessing(self, filenames, mask_filenames, main_path):
-        self.training_path = main_path
+        self.training_path = f"{main_path}"
         self.images_path = f"{self.training_path}images"
         self.masks_path = f"{self.training_path}mask"
         if PARAMETERS.CONVOLUTION is None:
@@ -445,7 +445,7 @@ class Preprocess:
             scale_names += ['2:1_1', '2:1_2', '2:1_3', '2:1_4']
             # lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES + 3), dtype='uint8')
             lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES + 3))
-            with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_0.5.pkl", 'rb') as f:
+            with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_0.5.pkl".replace('.ppm', '').replace('.jpg', ''), 'rb') as f:
                 img_lbp = pickle.load(f)
             lbp_matrix[:, -4:] = Preprocess.undo_repeat_pixels(img_lbp)
         else:
@@ -457,13 +457,13 @@ class Preprocess:
         cálculo individual de cada píxel)
         '''
         for i in 2 ** np.arange(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE)):
-            with bz2.BZ2File(f"{path}/{filename.split('.tif')[0]}_{float(i)}.pkl", 'rb') as f:
+            with bz2.BZ2File(f"{path}/{filename.split('.tif')[0].split('.jpg')[0].split('.ppm')[0]}_{float(i)}.pkl", 'rb') as f:
                 img_lbp = pickle.load(f)
             img_lbp = Preprocess.repeat_pixels(img_lbp, i)
             lbp_matrix[:, int(np.log2(i))] = img_lbp.ravel()
         #  Original image
         img_path = f"{self.preprocessed_path}/{PARAMETERS.INTERPOLATION_ALGORITHM}/original/" \
-                   f"{filename.split('.tif')[0]}_1.0.jpeg"
+                   f"{filename.split('.tif')[0]}_1.0.jpeg".replace('.ppm', '').replace('.jpg', '')
         if PARAMETERS.CONVOLUTION is None:
             img = Preprocess.read_img(img_path)
         else:

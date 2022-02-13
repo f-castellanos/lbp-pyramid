@@ -23,7 +23,7 @@ def img_preprocess(preprocess,
     mask_path = path + masks_path + mask
     label_path = path + labels_path + label
     # Image processing
-    if i < 14:
+    if i < {'DRIVE': 14, 'CHASE': 20, 'STARE': 14}[PARAMETERS.DATASET]:
         train_set = True
     else:
         train_set = False
@@ -38,14 +38,16 @@ def main(single_exec=False):
     preprocess = Preprocess(
         lbp_radius=1,
         lbp_method=PARAMETERS.LBP_METHOD,
-        height=PARAMETERS.HEIGHT,
-        width=PARAMETERS.WIDTH,
+        # height=PARAMETERS.HEIGHT,
+        height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+        width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET],
+        # width=PARAMETERS.WIDTH,
         balance=PARAMETERS.BALANCE
     )
     _ = PlotResults(height=preprocess.height, width=preprocess.width)
     # DB folders
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
-    path = parent_path + '/dataset/training/'
+    path = parent_path + f'/dataset/{PARAMETERS.DATASET}/training/'
     images_path = path + 'images/'
     images = sorted(os.listdir(images_path))
     masks_path = path + 'mask/'
@@ -56,14 +58,14 @@ def main(single_exec=False):
 
     # Train - Test dataframes
     if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1 and PARAMETERS.CHANNEL is None:
-        db_folder = 'DB'
+        db_folder = f'DB/{PARAMETERS.DATASET}'
     elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
-        db_folder = f'DB/extra_features/radius/{PARAMETERS.RADIUS}'
+        db_folder = f'DB/{PARAMETERS.DATASET}/extra_features/radius/{PARAMETERS.RADIUS}'
     elif PARAMETERS.CHANNEL is not None:
         channels_map = {0: 'red', 1: 'green', 2: 'blue'}
-        db_folder = f"DB/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
+        db_folder = f"DB/{PARAMETERS.DATASET}/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
     else:
-        db_folder = f'DB/extra_features/convolution/{PARAMETERS.CONV_PATH}'
+        db_folder = f'DB/{PARAMETERS.DATASET}/extra_features/convolution/{PARAMETERS.CONV_PATH}'
     db_path = f"{parent_path}/{db_folder}"
     if not os.path.exists(db_path):
         os.makedirs(db_path)
