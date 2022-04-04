@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="9887de86-02a0-47c2-a558-55f59d73fe08" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/convolution/fitness.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/convolution/kernel_optimization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+    <list default="true" id="9887de86-02a0-47c2-a558-55f59d73fe08" name="Changes" comment="genetic algorithm convolutions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/3-convolutions.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/3-convolutions.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convolution/fitness.py" beforeDir="false" afterPath="$PROJECT_DIR$/convolution/fitness.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convolution/kernel_optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/convolution/kernel_optimization.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -68,6 +65,40 @@
       <option name="presentableId" value="Default" />
       <updated>1646481386141</updated>
     </task>
+    <task id="LOCAL-00001" summary="genetic algorithm convolutions">
+      <created>1647794622867</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1647794622868</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="genetic algorithm convolutions" />
+    <option name="LAST_COMMIT_MESSAGE" value="genetic algorithm convolutions" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/convolution/fitness.py</url>
+          <line>87</line>
+          <option name="timeStamp" value="16" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

@@ -6,27 +6,41 @@ import time
 from joblib import Parallel, delayed
 import math
 import pickle
+from tqdm import tqdm
 
 np.random.seed(1)
+FITNESS_FUNCTION = 'RASTRIGIN'
 MIN_MAX = {'min': np.min, 'max': np.max}
 MIN_MAX_R = {'min': np.max, 'max': np.min}
 ARG_MIN_MAX = {'min': np.argmin, 'max': np.argmax}
 ARG_MIN_MAX_R = {'min': np.argmax, 'max': np.argmin}
 
 
+def elitism_comparison(v1, v2, method):
+    if method == 'max':
+        return v1 > v2
+    else:
+        return v1 < v2
+
+
 class EvolutionaryKernelOptimization:
-    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3, method='max'):
-    # def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=1, method='min'):  # benchmark function # noqa
+    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3, method='max', clip_v=1):
         self.p_size = p_size
         self.p_n_kernels = p_n_kernels
         self.k_size = k_size
         self.elitism = elitism
+        self.clip_v = clip_v
 
         self.k = 3
         self.alpha = .6
         self.sigma = .4
         self.recombination_proba = .2
         self.mutation_proba = .05
+        # self.k = 3
+        # self.alpha = .6
+        # self.sigma = 1
+        # self.recombination_proba = .8
+        # self.mutation_proba = .5
 
         self.population = None
         self.fitness = None
@@ -56,18 +70,20 @@ class EvolutionaryKernelOptimization:
         """
         if self.population is None:
             self.population = np.random.uniform(-1, 1, (self.p_size, self.p_n_kernels*(self.k_size**2)))
+            if self.clip_v != 1:
+                self.population = self.population * self.clip_v
             # self.population[:, 0] = self.population[:, 0] * 2  # benchmark function
             self.fitness = np.ones((self.p_size,)) * -1
             self.update_fitness()
 
-    def optimize(self, iterations, plot=True, save_results=True):
+    def optimize(self, iterations, plot='log', save_results=True):
         """
         Evolutionary algorithm main process. Carries out optimization.
         :param iterations: number of iterations of the optimization process.
         :param plot: whether to plot the optimization process.
         :param save_results: whether to save the results of the optimization process.
         """
-        for _ in range(iterations):
+        for _ in tqdm(range(iterations)):
             parent_indexes = self.tournament_selection()
             self.arithmetic_recombination(parent_indexes)
             self.uncorrelated_mutation()
@@ -77,24 +93,9 @@ class EvolutionaryKernelOptimization:
             self.graph_fitness_best_individual.append(MIN_MAX[self.method](self.fitness))
             self.graph_average_fitness.append(np.mean(self.fitness))
             self.graph_std.append(np.std(self.fitness))
-        if plot:
-            plt.figure(figsize=(18, 10))
-            plt.plot(self.graph_fitness_best_individual, label='Best individual')
-            plt.plot(self.graph_average_fitness, label='Average fitness')
-            plt.fill_between(
-                range(iterations),
-                np.array(self.graph_average_fitness) - np.array(self.graph_std),
-                np.array(self.graph_average_fitness) + np.array(self.graph_std),
-                alpha=.1
-            )
-            plt.legend(loc="upper left")
-            if not save_results:
-                plt.show()
         if save_results:
             path = f"outputs/{time.time()}".replace('.', '')
             Path(path).mkdir(parents=True, exist_ok=True)
-            if plot:
-                plt.savefig(f'{path}/fitness.png')
             text = f"""
 PARAMETERS
 ----------
@@ -121,6 +122,31 @@ KERNELS
             with open(f'{path}/population.pkl', 'wb') as handle:
                 pickle.dump(
                     {'population': self.population, 'fitness': self.fitness}, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(f'{path}/backup.pkl', 'wb') as handle:
+                pickle.dump(
+                    [self.graph_fitness_best_individual, self.graph_average_fitness, self.graph_std],
+                    handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        plt.figure(figsize=(18, 10))
+        if plot == 'log':
+            plt.yscale('log', base=10)
+            delta = 1 - np.min(self.graph_average_fitness)
+            if delta > 0:
+                self.graph_fitness_best_individual += delta
+                self.graph_average_fitness += delta
+        plt.plot(self.graph_fitness_best_individual, label='Best individual')
+        plt.plot(self.graph_average_fitness, label='Average fitness')
+        plt.fill_between(
+            range(iterations),
+            np.array(self.graph_average_fitness) - np.array(self.graph_std),
+            np.array(self.graph_average_fitness) + np.array(self.graph_std),
+            alpha=.1
+        )
+        plt.legend(loc="upper left")
+        if not save_results:
+            plt.show()
+        else:
+            plt.savefig(f'{path}/fitness.png')
 
     def subset_fitness(self, population, fitness):
         if (fitness == -1).any():
@@ -128,7 +154,8 @@ KERNELS
                 fitness_function,
                 1,
                 population[fitness == -1, :],
-                n_kernels=self.p_n_kernels
+                n_kernels=self.p_n_kernels,
+                function_name=FITNESS_FUNCTION
             )
         return fitness
 
@@ -139,13 +166,14 @@ KERNELS
         p, f = (self.offspring, self.offspring_fitness) if offspring else (self.population, self.fitness)
         subset = f == -1
         step = math.ceil(subset.sum() / self.n_jobs)
-        updated_fitness = Parallel(n_jobs=self.n_jobs)(delayed(self.subset_fitness)(
-            p[subset, :][i:i+step], f[subset][i:i+step]) for i in range(0, subset.sum(), step))
-        updated_fitness = np.array([item for sublist in updated_fitness for item in sublist])
-        if offspring:
-            self.offspring_fitness[subset] = updated_fitness
-        else:
-            self.fitness[subset] = updated_fitness
+        if step > 0:
+            updated_fitness = Parallel(n_jobs=self.n_jobs)(delayed(self.subset_fitness)(
+                p[subset, :][i:i+step], f[subset][i:i+step]) for i in range(0, subset.sum(), step))
+            updated_fitness = np.array([item for sublist in updated_fitness for item in sublist])
+            if offspring:
+                self.offspring_fitness[subset] = updated_fitness
+            else:
+                self.fitness[subset] = updated_fitness
 
     def tournament_selection(self):
         """
@@ -191,7 +219,7 @@ KERNELS
             self.offspring[mutation_selection] += np.random.normal(
                 0, self.sigma, size=mutation_selection.sum()
             ) * self.offspring[mutation_selection]
-            self.offspring = np.clip(self.offspring, -1, 1)
+            self.offspring = np.clip(self.offspring, -self.clip_v, self.clip_v)
             # self.offspring[:, 0] = np.clip(self.offspring[:, 0], -2, 2)  # benchmark function
             # self.offspring[:, 1] = np.clip(self.offspring[:, 1], -1, 1)  # benchmark function
             self.offspring_fitness[mutation_selection.sum(axis=1).astype(bool)] = -1
@@ -200,7 +228,11 @@ KERNELS
         """
         Replaces the population by offspring. Elitism allows to preserve the best individual of the population.
         """
-        if self.elitism and MIN_MAX[self.method](self.fitness) > MIN_MAX_R[self.method](self.offspring_fitness):
+        if self.elitism and elitism_comparison(
+                MIN_MAX[self.method](self.fitness),
+                MIN_MAX[self.method](self.offspring_fitness),
+                self.method
+        ):
             best_individual = ARG_MIN_MAX[self.method](self.fitness)
             worst_individual = ARG_MIN_MAX_R[self.method](self.offspring_fitness)
             self.offspring[worst_individual, :] = self.population[best_individual, :]
@@ -211,5 +243,82 @@ KERNELS
         self.fitness = self.offspring_fitness
 
 
-dev = EvolutionaryKernelOptimization()
-dev.optimize(iterations=300)
+kwargs = {
+    'SPHERE': {
+        'p_size': 10,
+        'p_n_kernels': 20,
+        'k_size': 1,
+        'method': 'min',
+        'clip_v': 50
+    },
+    'RASTRIGIN': {
+        'p_size': 10,
+        'p_n_kernels': 5,
+        'k_size': 1,
+        'method': 'min',
+        'clip_v': 5.12
+    },
+    'F1': {
+        'p_size': 50,
+        'p_n_kernels': 6,
+        'k_size': 3,
+        'method': 'max',
+        'clip_v': 1
+    }
+}[FITNESS_FUNCTION]
+
+dev = EvolutionaryKernelOptimization(**kwargs)
+dev.optimize(iterations=1500, plot='log', save_results=True)
+# dev.optimize(iterations=5000, plot='log', save_results=False)
+
+
+#
+# import numpy as np
+# a = np.array([0.7229746483530723, 0.08515192263657567, 0.5182647054318817, -0.577948184085242, -0.9989541553663077, -0.46437588131189556, -0.015762936300529815, -0.35556680561587284, 1.0, -0.03396069276807806, 1.0, 0.03233413612776116, 0.15589639839299552, 0.790919536475375, 0.006393604211677433, -0.001971978111566875, -0.07670632347266587, -0.44206823803265893])
+# k1 = a[:9].reshape(3, 3)
+# k2 = a[9:].reshape(3, 3)
+#
+# PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/training/images'
+# path = PATH + '/35_training.tif'
+#
+# from os import listdir
+# import cv2
+# import numpy as np
+# import pandas as pd
+# from PIL import Image
+# from sklearn.naive_bayes import MultinomialNB
+# from sklearn.metrics import f1_score
+# from preprocess.preprocess import Preprocess
+#
+# img = Preprocess.img_processing(np.asarray(Image.open(path).convert('RGB'))[:, :, 1])
+# img_k1 = cv2.filter2D(img, -1, k1)
+# img_k2 = cv2.filter2D(img, -1, k2)
+# import matplotlib.pyplot as plt
+# from PIL import Image
+# from fitness import IMAGES
+#
+# im1 = Image.fromarray(np.uint8(img_k1))
+# # plt.figure(figsize=(15, 11), dpi=80)
+# # plt.imshow(im, cmap='gray')
+# # plt.show()
+#
+# im2 = Image.fromarray(np.uint8(img_k2))
+# # plt.figure(figsize=(15, 11), dpi=80)
+# # plt.imshow(im, cmap='gray')
+# # plt.show()
+#
+# fig = plt.figure()
+#
+# plt.subplot(1, 3, 1)
+# plt.imshow(im1, cmap='gray')
+#
+# plt.subplot(1, 3, 2)
+# plt.imshow(im2, cmap='gray')
+#
+# plt.subplot(1, 3, 3)
+# plt.imshow(img, cmap='gray')
+#
+# # plt.subplot(1, 2, 2)
+# # plt.imshow(im2, cmap='gray')
+#
+# plt.show()
