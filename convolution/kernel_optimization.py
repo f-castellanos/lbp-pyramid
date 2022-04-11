@@ -9,7 +9,7 @@ import pickle
 from tqdm import tqdm
 
 np.random.seed(1)
-FITNESS_FUNCTION = 'RASTRIGIN'
+FITNESS_FUNCTION = 'F1'
 MIN_MAX = {'min': np.min, 'max': np.max}
 MIN_MAX_R = {'min': np.max, 'max': np.min}
 ARG_MIN_MAX = {'min': np.argmin, 'max': np.argmax}
@@ -24,18 +24,21 @@ def elitism_comparison(v1, v2, method):
 
 
 class EvolutionaryKernelOptimization:
-    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3, method='max', clip_v=1):
+    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3,
+                 method='max', clip_v=1, k=3, mutation_proba=.05, recombination_proba=.2):
         self.p_size = p_size
         self.p_n_kernels = p_n_kernels
-        self.k_size = k_size
+        if isinstance(k_size, int):
+            k_size = (k_size,)
+        self.k_size = np.array(k_size)
         self.elitism = elitism
         self.clip_v = clip_v
 
-        self.k = 3
+        self.k = k
         self.alpha = .6
         self.sigma = .4
-        self.recombination_proba = .2
-        self.mutation_proba = .05
+        self.recombination_proba = recombination_proba
+        self.mutation_proba = mutation_proba
         # self.k = 3
         # self.alpha = .6
         # self.sigma = 1
@@ -51,6 +54,7 @@ class EvolutionaryKernelOptimization:
         self.graph_average_fitness = []
         self.graph_std = []
 
+        # self.n_jobs = 1
         self.n_jobs = 6
         self.method = method
 
@@ -69,7 +73,8 @@ class EvolutionaryKernelOptimization:
         Initializes the population
         """
         if self.population is None:
-            self.population = np.random.uniform(-1, 1, (self.p_size, self.p_n_kernels*(self.k_size**2)))
+            self.population = np.random.uniform(
+                -1, 1, (self.p_size, (self.p_n_kernels // len(self.k_size))*(np.sum(self.k_size**2))))
             if self.clip_v != 1:
                 self.population = self.population * self.clip_v
             # self.population[:, 0] = self.population[:, 0] * 2  # benchmark function
@@ -155,6 +160,7 @@ KERNELS
                 1,
                 population[fitness == -1, :],
                 n_kernels=self.p_n_kernels,
+                k_size=self.k_size,
                 function_name=FITNESS_FUNCTION
             )
         return fitness
@@ -219,7 +225,7 @@ KERNELS
             self.offspring[mutation_selection] += np.random.normal(
                 0, self.sigma, size=mutation_selection.sum()
             ) * self.offspring[mutation_selection]
-            self.offspring = np.clip(self.offspring, -self.clip_v, self.clip_v)
+            # self.offspring = np.clip(self.offspring, -self.clip_v, self.clip_v)
             # self.offspring[:, 0] = np.clip(self.offspring[:, 0], -2, 2)  # benchmark function
             # self.offspring[:, 1] = np.clip(self.offspring[:, 1], -1, 1)  # benchmark function
             self.offspring_fitness[mutation_selection.sum(axis=1).astype(bool)] = -1
@@ -258,17 +264,28 @@ kwargs = {
         'method': 'min',
         'clip_v': 5.12
     },
+    # 'F1': {
+    #     'p_size': 50,
+    #     'p_n_kernels': 6,
+    #     'k_size': (3, 5, 7),
+    #     'method': 'max',
+    #     'clip_v': 1
+    # },
     'F1': {
-        'p_size': 50,
+        'p_size': 80,
         'p_n_kernels': 6,
-        'k_size': 3,
+        'k_size': (3, 5, 7),
         'method': 'max',
-        'clip_v': 1
+        'clip_v': 1,
+        'k': 2,
+        'mutation_proba': .1,
+        'recombination_proba': .6
     }
 }[FITNESS_FUNCTION]
 
 dev = EvolutionaryKernelOptimization(**kwargs)
-dev.optimize(iterations=1500, plot='log', save_results=True)
+dev.optimize(iterations=150, plot='lineal', save_results=True)
+# dev.optimize(iterations=1500, plot='log', save_results=True)
 # dev.optimize(iterations=5000, plot='log', save_results=False)
 
 

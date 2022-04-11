@@ -72,7 +72,14 @@
       <option name="project" value="LOCAL" />
       <updated>1647794622868</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="genetic algorithm convolutions">
+      <created>1649096104400</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1649096104400</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -89,16 +96,5 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="genetic algorithm convolutions" />
     <option name="LAST_COMMIT_MESSAGE" value="genetic algorithm convolutions" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/convolution/fitness.py</url>
-          <line>87</line>
-          <option name="timeStamp" value="16" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
