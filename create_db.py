@@ -61,7 +61,7 @@ def main(single_exec=False):
         db_folder = f'DB/{PARAMETERS.DATASET}'
     elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
         db_folder = f'DB/{PARAMETERS.DATASET}/extra_features/radius/{PARAMETERS.RADIUS}'
-    elif PARAMETERS.CHANNEL is not None:
+    elif PARAMETERS.CHANNEL is not None and PARAMETERS.CONVOLUTION is None:
         channels_map = {0: 'red', 1: 'green', 2: 'blue'}
         db_folder = f"DB/{PARAMETERS.DATASET}/extra_features/rgb/{channels_map[PARAMETERS.CHANNEL]}"
     else:

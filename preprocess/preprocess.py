@@ -21,14 +21,20 @@ class ParameterError(Exception):
 
 VALID_PARAMETERS = {
     # 'LBP_METHOD': ['var'],
-    'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
+    'LBP_METHOD': ['riu', 'var'],
+    # 'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
     'METHOD': ['get_pyramid_dataset'],
     # 'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
-    'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
-    'BALANCE': [False, True],
-    'N_SCALES': list(range(1, 7)),
-    'GRAY_INTENSITY': [True, False],
-    'X2SCALE': [False, True],
+    'INTERPOLATION_ALGORITHM': ['lanczos'],
+    # 'INTERPOLATION_ALGORITHM': ['nearest', 'lanczos', 'bicubic'],
+    'BALANCE': [False],
+    # 'BALANCE': [False, True],
+    'N_SCALES': [5],
+    # 'N_SCALES': list(range(1, 7)),
+    'GRAY_INTENSITY': [True],
+    # 'GRAY_INTENSITY': [True, False],
+    'X2SCALE': [True],
+    # 'X2SCALE': [False, True],
 }
 
 
@@ -96,7 +102,13 @@ class Preprocess:
                     im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
             else:
                 for i in float(2) ** np.arange(-1, 6):
-                    img = Preprocess.read_img(f"{self.original_preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
+                    if PARAMETERS.CONV_PREPROCESSING:
+                        img = Preprocess.read_img(f"{self.original_preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
+                    else:
+                        img = Preprocess.read_img(f"{self.images_path}/{filename}")
+                        img = self.rescale_add_borders(img)
+                        img = Preprocess.rescale(
+                            img.copy(), (self.width // i, self.height // i), algorithm=algorithm)
                     img = cv2.filter2D(img, -1, PARAMETERS.CONVOLUTION)
                     img = np.round((img/np.max(img)) * 255).astype(np.int8)
                     with bz2.BZ2File(f"{algorithm_path}/{filename.split('.')[0]}_{i}.pkl", 'wb') as f:

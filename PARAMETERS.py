@@ -1,4 +1,5 @@
 import numpy as np
+import hashlib
 
 """
 LBP_METHOD
@@ -80,6 +81,7 @@ ENCODING = 'categorical'
 CONVOLUTION = None
 # CONVOLUTION = np.round(np.random.uniform(low=-1, high=1, size=(9,)).reshape(3, 3), 3)
 CONV_PATH = None if CONVOLUTION is None else ';'.join(CONVOLUTION.ravel().astype(str))
+CONV_PREPROCESSING = False
 RADIUS = 1
 
 
@@ -110,4 +112,5 @@ def update_file_extension(parameters):
 
 
 def update_convolution_path(parameters):
-    return ';'.join(parameters.CONVOLUTION.ravel().astype(str))
+    return hashlib.sha256(';'.join(parameters.CONVOLUTION.ravel().astype(str)).encode('utf-8')).hexdigest()
+    # return ';'.join(parameters.CONVOLUTION.ravel().astype(str))

@@ -273,7 +273,7 @@ kwargs = {
     # },
     'F1': {
         'p_size': 80,
-        'p_n_kernels': 6,
+        'p_n_kernels': 3,
         'k_size': (3, 5, 7),
         'method': 'max',
         'clip_v': 1,
