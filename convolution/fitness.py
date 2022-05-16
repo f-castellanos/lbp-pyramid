@@ -4,11 +4,17 @@ import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
+import pickle
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
+import os
 
-from preprocess.preprocess import Preprocess
+if 'J_NOTEBOOK' in os.environ and os.environ['J_NOTEBOOK'] == '1':
+    from preprocess.preprocess import Preprocess
+else:
+    from preprocess import Preprocess
+
 from main import LGBMNumerical, lgb_f1_score
 
 CLF = LGBMNumerical(
@@ -24,6 +30,15 @@ CLF = LGBMNumerical(
     learning_rate=0.5,
     force_row_wise=True
 )
+
+
+def f1_score_w(y_true, y_pred, w):
+    actual_positives = y_true == 1
+    tp = np.sum((y_true[actual_positives] == y_pred[actual_positives]).astype(float)*w[actual_positives])
+    false_predictions = np.sum((y_true != y_pred).astype(float)*w)
+    return tp/(tp + .5*false_predictions)
+
+
 # CLF = MultinomialNB(fit_prior=True)
 PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/training/images'
 MASK_PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/training/mask'
@@ -49,22 +64,49 @@ def load_labels():
 
 IMAGES = load_images()
 MASKS = load_masks()
-Y_TRAIN = pd.DataFrame(
+Y_TRAIN_FULL = pd.DataFrame(
     np.concatenate([np.array(label, dtype=int)[MASKS[i]].ravel() for i, label in enumerate(load_labels()) if i < 10],
                    axis=0).T).values.ravel()
-Y_TEST = pd.DataFrame(
+Y_TEST_FULL = pd.DataFrame(
     np.concatenate([np.array(label, dtype=int)[MASKS[i]].ravel() for i, label in enumerate(load_labels()) if i >= 10],
                    axis=0).T).values.ravel()
 
-TRAIN_INDEX, _ = train_test_split(np.arange(Y_TRAIN.shape[0]), test_size=0.5, random_state=42, stratify=Y_TRAIN)
-TEST_INDEX, _ = train_test_split(np.arange(Y_TEST.shape[0]), test_size=0.5, random_state=42, stratify=Y_TEST)
-Y_TRAIN = Y_TRAIN[TRAIN_INDEX]
-Y_TEST = Y_TEST[TEST_INDEX]
+# TRAIN_INDEX, _ = train_test_split(np.arange(Y_TRAIN.shape[0]), test_size=0.5, random_state=42, stratify=Y_TRAIN)
+# TEST_INDEX, _ = train_test_split(np.arange(Y_TEST.shape[0]), test_size=0.5, random_state=42, stratify=Y_TEST)
+TRAIN_INDEX, _ = train_test_split(np.arange(Y_TRAIN_FULL.shape[0]), test_size=0.2, random_state=42, stratify=Y_TRAIN_FULL)
+TEST_INDEX, _ = train_test_split(np.arange(Y_TEST_FULL.shape[0]), test_size=0.2, random_state=42, stratify=Y_TEST_FULL)
+Y_TRAIN = Y_TRAIN_FULL[TRAIN_INDEX]
+Y_TEST = Y_TEST_FULL[TEST_INDEX]
+
+# print('a')
+# a = [Preprocess.img_processing(img, params=[17, 12, 72, 82, 60, 94, 37, 38]) for img in IMAGES[:10]][2]
+# import matplotlib.pyplot as plt
+# plt.figure()
+# plt.imshow(a, cmap='gray')
+# plt.show()
+# print('b')
+
+PREPROCESSED_IMG = [pd.DataFrame(Preprocess.img_processing(img, params=[37, 8, 15, 132, 45, 7, 66, 41]).ravel(), columns=['p']) for img in IMAGES[:10]]
+X_TRAIN_P = pd.concat(PREPROCESSED_IMG, ignore_index=True).iloc[TRAIN_INDEX, :]
+PREPROCESSED_IMG = [pd.DataFrame(Preprocess.img_processing(img, params=[37, 8, 15, 132, 45, 7, 66, 41]).ravel(), columns=['p']) for img in IMAGES[10:]]
+X_TEST_P = pd.concat(PREPROCESSED_IMG, ignore_index=True).iloc[TEST_INDEX, :]
+
+
+with open(r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/weights.pkl', mode='rb') as f:
+    W_TRAIN_FULL, W_TEST_FULL = pickle.load(f)
+    W_TRAIN_FULL[W_TRAIN_FULL == 0] = 0.3
+    W_TEST_FULL[W_TEST_FULL == 0] = 0.3
+W_TRAIN = W_TRAIN_FULL[TRAIN_INDEX]
+W_TEST = W_TEST_FULL[TEST_INDEX]
+
+
+def lgb_f1_score_w(y_hat, data):
+    y_true = data.get_label()
+    y_hat = np.round(y_hat)  # scikits f1 doesn't like probabilities
+    return 'f1', f1_score_w(y_true, y_hat, W_TEST), True
 
 
 def f1(individual, n_kernels, k_size, *_, **__):
-    # k_len = int(len(individual)/n_kernels)
-    # k_size = int(np.sqrt(k_len))
     features = [pd.DataFrame()]*14
     count = 0
     for j, ks in enumerate(k_size):
@@ -81,6 +123,41 @@ def f1(individual, n_kernels, k_size, *_, **__):
     # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
     y_pred = CLF.predict(pd.concat(features[10:], ignore_index=True).iloc[TEST_INDEX, :])
     return f1_score(Y_TEST, y_pred)
+
+
+def f1_preprocess(individual, *_, **__):
+    # clf = MultinomialNB(fit_prior=True)
+    individual = np.round(individual).astype(int)
+    individual[4] = max(1, individual[4])
+    # print(individual)
+    features = [
+        pd.DataFrame(Preprocess.img_processing(np.asarray(img), params=individual)[mask])
+        for img, mask in zip(IMAGES, MASKS)
+    ]
+    CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
+    # clf.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
+    y_pred = CLF.predict(pd.concat(features[10:], ignore_index=True))
+    # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
+    return f1_score(Y_TEST_FULL, y_pred)
+
+
+def f1_preprocess_w(individual, *_, **__):
+    # clf = MultinomialNB(fit_prior=True)
+    individual = np.round(individual).astype(int)
+    individual[4] = max(1, individual[4])
+    # print(individual)
+    features = [
+        pd.DataFrame(Preprocess.img_processing(np.asarray(img), params=individual)[mask])
+        for img, mask in zip(IMAGES, MASKS)
+    ]
+    df_train = pd.concat([X_TRAIN_P, pd.concat(features[:10], ignore_index=True).iloc[TRAIN_INDEX, :]], axis=1)
+    # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
+    CLF.fit(df_train, Y_TRAIN, sample_weight=W_TRAIN, eval_metric=lgb_f1_score_w)
+    # clf.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
+    df_test = pd.concat([X_TEST_P, pd.concat(features[10:], ignore_index=True).iloc[TEST_INDEX, :]], axis=1)
+    y_pred = CLF.predict(df_test)
+    # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
+    return f1_score_w(Y_TEST, y_pred, W_TEST)
 
 # def fitness_function(x, *_, **__):
 #     """
@@ -107,4 +184,6 @@ def fitness_function(*args, **kwargs):
         'SPHERE': sphere,
         'RASTRIGIN': rastrigin,
         'F1': f1,
+        'PREPROCESS': f1_preprocess,
+        'PREPROCESS_W': f1_preprocess_w
     }[kwargs['function_name']](*args, **kwargs)

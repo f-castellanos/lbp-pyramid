@@ -12,7 +12,10 @@ from joblib import Parallel, delayed, parallel_backend
 from sklearn.preprocessing import OneHotEncoder
 
 import PARAMETERS
-from lbp_scikit import lbp
+if 'J_NOTEBOOK' in os.environ and os.environ['J_NOTEBOOK'] == '1':
+    from lbp_scikit import lbp
+else:
+    from .lbp_scikit import lbp
 
 
 class ParameterError(Exception):
@@ -39,6 +42,10 @@ VALID_PARAMETERS = {
 
 
 PARENT_PATH = str(Path(os.path.dirname(os.path.abspath(__file__))).parent.parent)
+PREPROCESS_PARAMS = {
+    'DRIVE': np.array([37, 8, 15, 132, 45, 7, 66, 41]),
+    'DRIVE_W': np.array([35,   7,  24, 166,  45,   4,  86,  35])
+}
 
 
 class Preprocess:
@@ -69,6 +76,10 @@ class Preprocess:
             if PARAMETERS.CHANNEL is not None:
                 channels_map = {0: 'red', 1: 'green', 2: 'blue'}
                 self.preprocessed_path += f"_{channels_map[PARAMETERS.CHANNEL]}_channel"
+            if PARAMETERS.PREPROCESS_OPTIMIZATION and PARAMETERS.PREPROCESS_W:
+                self.preprocessed_path += "_optimized_w"
+            elif PARAMETERS.PREPROCESS_OPTIMIZATION:
+                self.preprocessed_path += "_optimized"
         else:
             PARAMETERS.CONV_PATH = PARAMETERS.update_convolution_path(PARAMETERS)
             self.preprocessed_path = f"{self.training_path}preprocessed_convolutions/{PARAMETERS.CONV_PATH}"
@@ -93,7 +104,12 @@ class Preprocess:
                 img = Preprocess.read_img(f"{self.images_path}/{filename}")
                 img, mask = self.filter_by_mask(img, f"{self.masks_path}/{mask_filename}")
                 # if PARAMETERS.CHANNEL is None:
-                img = Preprocess.img_processing(img, PARAMETERS.PLOT)
+                params = None
+                if PARAMETERS.PREPROCESS_OPTIMIZATION and PARAMETERS.PREPROCESS_W:
+                    params = PREPROCESS_PARAMS[PARAMETERS.DATASET + '_W']
+                elif PARAMETERS.PREPROCESS_OPTIMIZATION:
+                    params = PREPROCESS_PARAMS[PARAMETERS.DATASET]
+                img = Preprocess.img_processing(img, PARAMETERS.PLOT, params=params)
                 img = self.rescale_add_borders(img)
                 for i in float(2) ** np.arange(-1, 6):
                     img_resized = Preprocess.rescale(
@@ -319,8 +335,8 @@ class Preprocess:
 
     # Image transformations
     @staticmethod
-    def local_equalize_hist(img, plot=False):
-        cla_he = cv2.createCLAHE(clipLimit=3, tileGridSize=(8, 8))
+    def local_equalize_hist(img, plot=False, clip_limit=3, tile_grid_size=8):
+        cla_he = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
         im_equalized = cla_he.apply(img)
         if plot:
             img = np.asarray(img)
@@ -374,10 +390,15 @@ class Preprocess:
         return img_filtered
 
     @staticmethod
-    def img_processing(img, plot=False):
-        img = Preprocess.noise_reduction(img, plot)
-        img = Preprocess.local_equalize_hist(img, plot)
-        img = Preprocess.noise_reduction(img, plot)
+    def img_processing(img, plot=False, params=None):
+        if params is None:
+            img = Preprocess.noise_reduction(img, plot)
+            img = Preprocess.local_equalize_hist(img, plot)
+            img = Preprocess.noise_reduction(img, plot)
+        else:
+            img = Preprocess.noise_reduction(img, plot, *params[:3])
+            img = Preprocess.local_equalize_hist(img, plot, *params[3:5])
+            img = Preprocess.noise_reduction(img, plot, *params[5:])
         return img
 
     # Gold Standard

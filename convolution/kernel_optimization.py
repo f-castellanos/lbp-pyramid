@@ -24,8 +24,8 @@ def elitism_comparison(v1, v2, method):
 
 
 class EvolutionaryKernelOptimization:
-    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3,
-                 method='max', clip_v=1, k=3, mutation_proba=.05, recombination_proba=.2):
+    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3, apply_abs=False,
+                 method='max', clip_v=1, k=3, mutation_proba=.05, recombination_proba=.2, n_jobs=6):
         self.p_size = p_size
         self.p_n_kernels = p_n_kernels
         if isinstance(k_size, int):
@@ -33,6 +33,8 @@ class EvolutionaryKernelOptimization:
         self.k_size = np.array(k_size)
         self.elitism = elitism
         self.clip_v = clip_v
+        self.fitness_function = FITNESS_FUNCTION
+        self.apply_abs = apply_abs
 
         self.k = k
         self.alpha = .6
@@ -55,10 +57,10 @@ class EvolutionaryKernelOptimization:
         self.graph_std = []
 
         # self.n_jobs = 1
-        self.n_jobs = 6
+        self.n_jobs = n_jobs
         self.method = method
 
-        self.init_population()
+        # self.init_population()
         # import matplotlib.pyplot as plt
         # from PIL import Image
         # from fitness import IMAGES
@@ -77,6 +79,8 @@ class EvolutionaryKernelOptimization:
                 -1, 1, (self.p_size, (self.p_n_kernels // len(self.k_size))*(np.sum(self.k_size**2))))
             if self.clip_v != 1:
                 self.population = self.population * self.clip_v
+                if self.apply_abs:
+                    self.population = np.abs(self.population)
             # self.population[:, 0] = self.population[:, 0] * 2  # benchmark function
             self.fitness = np.ones((self.p_size,)) * -1
             self.update_fitness()
@@ -154,15 +158,27 @@ KERNELS
             plt.savefig(f'{path}/fitness.png')
 
     def subset_fitness(self, population, fitness):
+        # import time
+        # fitness_copy = fitness.copy()
         if (fitness == -1).any():
+            # start_time = time.time()
             fitness[fitness == -1] = np.apply_along_axis(
                 fitness_function,
                 1,
                 population[fitness == -1, :],
                 n_kernels=self.p_n_kernels,
                 k_size=self.k_size,
-                function_name=FITNESS_FUNCTION
+                function_name=self.fitness_function
             )
+            # e = int(time.time() - start_time)
+            # print('11111111111111111111111')
+            # print('{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
+            # start_time = time.time()
+            # _ = [fitness_function(individual, n_kernels=self.p_n_kernels, k_size=self.k_size, function_name=self.fitness_function) for individual in population[fitness_copy == -1, :]]
+            # e = int(time.time() - start_time)
+            # print('22222222222222222222222222')
+            # print('{:02d}:{:02d}:{:02d}'.format(e // 3600, (e % 3600 // 60), e % 60))
+
         return fitness
 
     def update_fitness(self, offspring=False):
@@ -225,6 +241,8 @@ KERNELS
             self.offspring[mutation_selection] += np.random.normal(
                 0, self.sigma, size=mutation_selection.sum()
             ) * self.offspring[mutation_selection]
+            if self.apply_abs:
+                self.offspring = np.abs(self.offspring)
             # self.offspring = np.clip(self.offspring, -self.clip_v, self.clip_v)
             # self.offspring[:, 0] = np.clip(self.offspring[:, 0], -2, 2)  # benchmark function
             # self.offspring[:, 1] = np.clip(self.offspring[:, 1], -1, 1)  # benchmark function
@@ -272,9 +290,10 @@ kwargs = {
     #     'clip_v': 1
     # },
     'F1': {
-        'p_size': 80,
-        'p_n_kernels': 3,
+        'p_size': 100,
+        'p_n_kernels': 6,
         'k_size': (3, 5, 7),
+        # 'k_size': 3,
         'method': 'max',
         'clip_v': 1,
         'k': 2,
@@ -283,8 +302,11 @@ kwargs = {
     }
 }[FITNESS_FUNCTION]
 
-dev = EvolutionaryKernelOptimization(**kwargs)
-dev.optimize(iterations=150, plot='lineal', save_results=True)
+
+if __name__ == "__main__":
+    dev = EvolutionaryKernelOptimization(**kwargs)
+    dev.init_population()
+    dev.optimize(iterations=200, plot='lineal', save_results=True)
 # dev.optimize(iterations=1500, plot='log', save_results=True)
 # dev.optimize(iterations=5000, plot='log', save_results=False)
 

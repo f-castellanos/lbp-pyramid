@@ -16,7 +16,10 @@ from sklearn.metrics import f1_score
 
 import PARAMETERS
 from confusion_matrix_pretty_print import print_confusion_matrix
-from preprocess.preprocess import Preprocess
+if 'J_NOTEBOOK' in os.environ and os.environ['J_NOTEBOOK'] == '1':
+    from preprocess.preprocess import Preprocess
+else:
+    from preprocess import Preprocess  # noqa
 
 
 class LGBMCategorical(lightgbm.LGBMClassifier):
