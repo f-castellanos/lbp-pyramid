@@ -59,10 +59,11 @@ def main(single_exec=False):
     # Train - Test dataframes
     if PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS == 1 and PARAMETERS.CHANNEL is None and not PARAMETERS.PREPROCESS_OPTIMIZATION:
         db_folder = f'DB/{PARAMETERS.DATASET}'
-    elif PARAMETERS.PREPROCESS_OPTIMIZATION and PARAMETERS.PREPROCESS_W:
-        db_folder = f'DB/{PARAMETERS.DATASET}/extra_features/preprocess_optimization_w'
     elif PARAMETERS.PREPROCESS_OPTIMIZATION:
-        db_folder = f'DB/{PARAMETERS.DATASET}/extra_features/preprocess_optimization'
+        channels_map = {0: 'red', 1: 'green', 2: 'blue'}
+        db_folder = \
+            f'DB/{PARAMETERS.DATASET}/extra_features/preprocess_optimization_{channels_map[PARAMETERS.CHANNEL]}' + {
+                "default": "", "w": "_w", "lbp": "_lbp"}[PARAMETERS.PREPROCESS_TYPE]
     elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
         db_folder = f'DB/{PARAMETERS.DATASET}/extra_features/radius/{PARAMETERS.RADIUS}'
     elif PARAMETERS.CHANNEL is not None and PARAMETERS.CONVOLUTION is None:

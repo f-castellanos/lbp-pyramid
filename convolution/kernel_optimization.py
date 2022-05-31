@@ -93,8 +93,12 @@ class EvolutionaryKernelOptimization:
         :param save_results: whether to save the results of the optimization process.
         """
         for _ in tqdm(range(iterations)):
-            parent_indexes = self.tournament_selection()
-            self.arithmetic_recombination(parent_indexes)
+            if self.p_size > 1:
+                parent_indexes = self.tournament_selection()
+                self.arithmetic_recombination(parent_indexes)
+            else:
+                self.offspring = self.population.copy()
+                self.offspring_fitness = self.fitness.copy()
             self.uncorrelated_mutation()
             self.update_fitness(offspring=True)
             self.update_population()
@@ -240,7 +244,7 @@ KERNELS
         if mutation_selection.any():
             self.offspring[mutation_selection] += np.random.normal(
                 0, self.sigma, size=mutation_selection.sum()
-            ) * self.offspring[mutation_selection]
+            )
             if self.apply_abs:
                 self.offspring = np.abs(self.offspring)
             # self.offspring = np.clip(self.offspring, -self.clip_v, self.clip_v)

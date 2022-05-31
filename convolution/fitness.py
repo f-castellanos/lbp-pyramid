@@ -9,6 +9,8 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 import os
+import PARAMETERS
+
 
 if 'J_NOTEBOOK' in os.environ and os.environ['J_NOTEBOOK'] == '1':
     from preprocess.preprocess import Preprocess
@@ -64,6 +66,16 @@ def load_labels():
 
 IMAGES = load_images()
 MASKS = load_masks()
+
+P_OBJ = Preprocess(
+    lbp_radius=1,
+    lbp_method=PARAMETERS.LBP_METHOD,
+    height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+    width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET],
+    balance=PARAMETERS.BALANCE
+)
+MASKS_B = [P_OBJ.rescale_add_borders(mask).astype(bool) for mask in MASKS]
+
 Y_TRAIN_FULL = pd.DataFrame(
     np.concatenate([np.array(label, dtype=int)[MASKS[i]].ravel() for i, label in enumerate(load_labels()) if i < 10],
                    axis=0).T).values.ravel()
@@ -159,6 +171,48 @@ def f1_preprocess_w(individual, *_, **__):
     # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
     return f1_score_w(Y_TEST, y_pred, W_TEST)
 
+
+def f1_preprocess_lbp(individual, *_, **__):
+    # clf = MultinomialNB(fit_prior=True)
+    individual = np.round(individual).astype(int)
+    individual[4] = max(1, individual[4])
+    preprocessed_images = [Preprocess.img_processing(np.asarray(img), params=individual) for img in IMAGES]
+
+    images = [P_OBJ.rescale_add_borders(img) for img in preprocessed_images]
+    i = 2
+    images = [
+        Preprocess.rescale(img, (P_OBJ.width // i, P_OBJ.height // i), algorithm=PARAMETERS.INTERPOLATION_ALGORITHM)
+        for img in images
+    ]
+    riu_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='riu', plot=PARAMETERS.PLOT), i)[mask], columns=['riu'])
+        for img, mask in zip(images, MASKS_B)]
+    var_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='var', plot=PARAMETERS.PLOT), i)[mask], columns=['var'])
+        for img, mask in zip(images, MASKS_B)]
+
+    preprocessed_images = [pd.DataFrame(img[mask], columns=['original']) for img, mask in zip(IMAGES, MASKS)]
+
+    df_train = pd.concat([
+        pd.concat(preprocessed_images[:10], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(riu_images[:10], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(var_images[:10], ignore_index=True).iloc[TRAIN_INDEX, :],
+    ], axis=1)
+    # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
+    CLF.fit(df_train, Y_TRAIN, eval_metric=lgb_f1_score)
+    # clf.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
+    df_test = pd.concat([
+        pd.concat(preprocessed_images[10:], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(riu_images[10:], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(var_images[10:], ignore_index=True).iloc[TEST_INDEX, :],
+    ], axis=1)
+    y_pred = CLF.predict(df_test)
+    # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
+    return f1_score(Y_TEST, y_pred)
+
+
 # def fitness_function(x, *_, **__):
 #     """
 #     Six-Hump Camel-Back Function
@@ -185,5 +239,6 @@ def fitness_function(*args, **kwargs):
         'RASTRIGIN': rastrigin,
         'F1': f1,
         'PREPROCESS': f1_preprocess,
-        'PREPROCESS_W': f1_preprocess_w
+        'PREPROCESS_W': f1_preprocess_w,
+        'PREPROCESS_LBP': f1_preprocess_lbp
     }[kwargs['function_name']](*args, **kwargs)

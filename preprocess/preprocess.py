@@ -13,9 +13,9 @@ from sklearn.preprocessing import OneHotEncoder
 
 import PARAMETERS
 if 'J_NOTEBOOK' in os.environ and os.environ['J_NOTEBOOK'] == '1':
-    from lbp_scikit import lbp
-else:
     from .lbp_scikit import lbp
+else:
+    from lbp_scikit import lbp
 
 
 class ParameterError(Exception):
@@ -44,7 +44,8 @@ VALID_PARAMETERS = {
 PARENT_PATH = str(Path(os.path.dirname(os.path.abspath(__file__))).parent.parent)
 PREPROCESS_PARAMS = {
     'DRIVE': np.array([37, 8, 15, 132, 45, 7, 66, 41]),
-    'DRIVE_W': np.array([35,   7,  24, 166,  45,   4,  86,  35])
+    'DRIVE_W': np.array([35,   7,  24, 166,  45,   4,  86,  35]),
+    'DRIVE_LBP': np.array([59, 43,  0,  9, 96, 17, 16, 64])
 }
 
 
@@ -76,10 +77,9 @@ class Preprocess:
             if PARAMETERS.CHANNEL is not None:
                 channels_map = {0: 'red', 1: 'green', 2: 'blue'}
                 self.preprocessed_path += f"_{channels_map[PARAMETERS.CHANNEL]}_channel"
-            if PARAMETERS.PREPROCESS_OPTIMIZATION and PARAMETERS.PREPROCESS_W:
-                self.preprocessed_path += "_optimized_w"
-            elif PARAMETERS.PREPROCESS_OPTIMIZATION:
-                self.preprocessed_path += "_optimized"
+            if PARAMETERS.PREPROCESS_OPTIMIZATION:
+                self.preprocessed_path += f'_optimized' + {
+                    "default": "", "w": "_w", "lbp": "_lbp"}[PARAMETERS.PREPROCESS_TYPE]
         else:
             PARAMETERS.CONV_PATH = PARAMETERS.update_convolution_path(PARAMETERS)
             self.preprocessed_path = f"{self.training_path}preprocessed_convolutions/{PARAMETERS.CONV_PATH}"
@@ -105,10 +105,9 @@ class Preprocess:
                 img, mask = self.filter_by_mask(img, f"{self.masks_path}/{mask_filename}")
                 # if PARAMETERS.CHANNEL is None:
                 params = None
-                if PARAMETERS.PREPROCESS_OPTIMIZATION and PARAMETERS.PREPROCESS_W:
-                    params = PREPROCESS_PARAMS[PARAMETERS.DATASET + '_W']
-                elif PARAMETERS.PREPROCESS_OPTIMIZATION:
-                    params = PREPROCESS_PARAMS[PARAMETERS.DATASET]
+                if PARAMETERS.PREPROCESS_OPTIMIZATION:
+                    params = PREPROCESS_PARAMS[PARAMETERS.DATASET + {
+                        "default": "", "w": "_W", "lbp": "_LBP"}[PARAMETERS.PREPROCESS_TYPE]]
                 img = Preprocess.img_processing(img, PARAMETERS.PLOT, params=params)
                 img = self.rescale_add_borders(img)
                 for i in float(2) ** np.arange(-1, 6):

@@ -1,23 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="9887de86-02a0-47c2-a558-55f59d73fe08" name="Changes" comment="genetic algorithm convolutions - 2 - (3x3, 5x5, 7x7)">
-      <change afterPath="$PROJECT_DIR$/convolution/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/preprocess/preprocess_optimization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/lbp-pyramid.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="9887de86-02a0-47c2-a558-55f59d73fe08" name="Changes" comment="process optimization">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/3-convolutions-v1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/3-convolutions-v1.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/4-convolutions-lbp.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/4-convolutions-lbp.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/5-optimized-preprocess-v2.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/5-optimized-preprocess-v2.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PARAMETERS.py" beforeDir="false" afterPath="$PROJECT_DIR$/PARAMETERS.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/convolution/fitness.py" beforeDir="false" afterPath="$PROJECT_DIR$/convolution/fitness.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/convolution/kernel_optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/convolution/kernel_optimization.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/create_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_db.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lbm_fit.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/lbm_fit.pkl" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/preprocess/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/preprocess_optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess_optimization.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,6 +36,11 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "last_opened_file_path": "/home/fer/Documents/ewanna"
+  }
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/convolution" />
@@ -178,7 +177,14 @@
       <option name="project" value="LOCAL" />
       <updated>1650358882332</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="process optimization">
+      <created>1652721965189</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1652721965189</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -195,35 +201,31 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="genetic algorithm convolutions" />
     <MESSAGE value="genetic algorithm convolutions - 2 - (3x3, 5x5, 7x7)" />
-    <option name="LAST_COMMIT_MESSAGE" value="genetic algorithm convolutions - 2 - (3x3, 5x5, 7x7)" />
+    <MESSAGE value="process optimization" />
+    <option name="LAST_COMMIT_MESSAGE" value="process optimization" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/convolution/kernel_optimization.py</url>
-          <line>196</line>
-          <option name="timeStamp" value="57" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/create_db.py</url>
-          <line>101</line>
+          <line>102</line>
           <option name="timeStamp" value="59" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/create_db.py</url>
-          <line>79</line>
-          <option name="timeStamp" value="61" />
+          <url>file://$PROJECT_DIR$/preprocess/preprocess.py</url>
+          <line>140</line>
+          <option name="timeStamp" value="75" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/create_db.py</url>
-          <line>78</line>
-          <option name="timeStamp" value="62" />
+          <url>file://$PROJECT_DIR$/preprocess/preprocess.py</url>
+          <line>143</line>
+          <option name="timeStamp" value="76" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/convolution/fitness.py</url>
-          <line>88</line>
-          <option name="timeStamp" value="67" />
+          <url>file://$PROJECT_DIR$/preprocess/preprocess.py</url>
+          <line>144</line>
+          <option name="timeStamp" value="77" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
