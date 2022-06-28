@@ -43,9 +43,12 @@ VALID_PARAMETERS = {
 
 PARENT_PATH = str(Path(os.path.dirname(os.path.abspath(__file__))).parent.parent)
 PREPROCESS_PARAMS = {
-    'DRIVE': np.array([37, 8, 15, 132, 45, 7, 66, 41]),
+    # 'DRIVE': np.array([37, 8, 15, 132, 45, 7, 66, 41]),  # AE antiguo
+    'DRIVE_GB': np.array([23,  7, 64, 65, 40, 54, 38, 42]),
     'DRIVE_W': np.array([35,   7,  24, 166,  45,   4,  86,  35]),
-    'DRIVE_LBP': np.array([59, 43,  0,  9, 96, 17, 16, 64])
+    'DRIVE_LBP': np.array([59, 43,  0,  9, 96, 17, 16, 64]),
+    'DRIVE_LBP_GB': np.array([20,  8, 71, 61, 46, 68, 30, 36]),
+    'STARE_LBP_GB': np.array([60, 11, 74, 52, 29, 32, 29, 28]),
 }
 
 
@@ -79,7 +82,8 @@ class Preprocess:
                 self.preprocessed_path += f"_{channels_map[PARAMETERS.CHANNEL]}_channel"
             if PARAMETERS.PREPROCESS_OPTIMIZATION:
                 self.preprocessed_path += f'_optimized' + {
-                    "default": "", "w": "_w", "lbp": "_lbp"}[PARAMETERS.PREPROCESS_TYPE]
+                    "default": "", "gb": "_gb", "w": "_w", "lbp": "_lbp", 'lbp_gb': "_lbp_gb"
+                }[PARAMETERS.PREPROCESS_TYPE]
         else:
             PARAMETERS.CONV_PATH = PARAMETERS.update_convolution_path(PARAMETERS)
             self.preprocessed_path = f"{self.training_path}preprocessed_convolutions/{PARAMETERS.CONV_PATH}"
@@ -107,7 +111,8 @@ class Preprocess:
                 params = None
                 if PARAMETERS.PREPROCESS_OPTIMIZATION:
                     params = PREPROCESS_PARAMS[PARAMETERS.DATASET + {
-                        "default": "", "w": "_W", "lbp": "_LBP"}[PARAMETERS.PREPROCESS_TYPE]]
+                        "default": "", "gb": "_GB", "w": "_W", "lbp": "_LBP", 'lbp_gb': "_LBP_GB"
+                    }[PARAMETERS.PREPROCESS_TYPE]]
                 img = Preprocess.img_processing(img, PARAMETERS.PLOT, params=params)
                 img = self.rescale_add_borders(img)
                 for i in float(2) ** np.arange(-1, 6):
@@ -176,8 +181,9 @@ class Preprocess:
         """
         if 'SKIP_VALIDATION' not in os.environ or os.environ['SKIP_VALIDATION'] != 'True':
             for k, v in VALID_PARAMETERS.items():
-                if getattr(PARAMETERS, k) not in v:
-                    raise ParameterError(f"{getattr(PARAMETERS, k)} is not correctly defined")
+                pass
+                # if getattr(PARAMETERS, k) not in v:
+                #     raise ParameterError(f"{getattr(PARAMETERS, k)} is not correctly defined")
 
     @staticmethod
     def read_img(path):
@@ -426,6 +432,7 @@ class Preprocess:
         # img[label == 0] = [0, 0, 0]
         im = Image.fromarray(np.uint8(img))
         plt.figure(figsize=(15, 11), dpi=80)
+        plt.axis('off')
         plt.imshow(im)
         plt.show()
         # im.show()
@@ -483,11 +490,7 @@ class Preprocess:
         else:
             # lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES), dtype='uint8')
             lbp_matrix = np.zeros((self.height * self.width, PARAMETERS.N_SCALES))
-        '''
-        TODO: si es 1:0.5 -> hacer operación inversa a repeat_prixels (matrix 4x2x2) para generar 4 columnas en la
-        BBDD porque sino se estarían haciendo 4 predicciones para un mismo pixel (y así se tiene más info para el
-        cálculo individual de cada píxel)
-        '''
+
         for i in 2 ** np.arange(PARAMETERS.N_SCALES - int(PARAMETERS.X2SCALE)):
             with bz2.BZ2File(f"{path}/{filename.split('.tif')[0].split('.jpg')[0].split('.ppm')[0]}_{float(i)}.pkl", 'rb') as f:
                 img_lbp = pickle.load(f)

@@ -1,5 +1,8 @@
 import numpy as np
-from fitness import fitness_function
+try:
+    from fitness import fitness_function
+except ImportError:
+    pass
 import matplotlib.pyplot as plt
 from pathlib import Path
 import time
@@ -301,6 +304,7 @@ kwargs = {
         'method': 'max',
         'clip_v': 1,
         'k': 2,
+        'n_jobs': 8,
         'mutation_proba': .1,
         'recombination_proba': .6
     }
@@ -308,9 +312,12 @@ kwargs = {
 
 
 if __name__ == "__main__":
+    import os
+    os.environ['J_NOTEBOOK'] = '1'
+    from fitness import fitness_function
     dev = EvolutionaryKernelOptimization(**kwargs)
     dev.init_population()
-    dev.optimize(iterations=200, plot='lineal', save_results=True)
+    dev.optimize(iterations=150, plot='lineal', save_results=True)
 # dev.optimize(iterations=1500, plot='log', save_results=True)
 # dev.optimize(iterations=5000, plot='log', save_results=False)
 

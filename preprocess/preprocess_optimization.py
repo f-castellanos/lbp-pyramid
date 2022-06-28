@@ -10,15 +10,17 @@ kwargs = {
     'k': 2,
     'mutation_proba': 1.5,
     'recombination_proba': .6,
-    'n_jobs': 1,
-    # 'n_jobs': 5,
+    # 'n_jobs': 1,
+    'n_jobs': 10,
     'apply_abs': True
 }
 
 dev = EvolutionaryKernelOptimization(**kwargs)
 # dev.fitness_function = 'PREPROCESS'
+dev.fitness_function = 'PREPROCESS_LBP_GB'
+# dev.fitness_function = 'PREPROCESS_GB'
 # dev.fitness_function = 'PREPROCESS_W'
-dev.fitness_function = 'PREPROCESS_LBP'
+# dev.fitness_function = 'PREPROCESS_LBP'
 dev.init_population()
 # dev.optimize(iterations=5, plot='lineal', save_results=True)
-dev.optimize(iterations=150, plot='lineal', save_results=True)
+dev.optimize(iterations=100, plot='lineal', save_results=True)

@@ -52,7 +52,7 @@ class LGBMNumerical(lightgbm.LGBMClassifier):
         x.columns = [str(col).replace(':', '') for col in x.columns]
         for col in x.columns:
             x[col] = x[col].astype('float')
-        return super().fit(x, *args, **kwargs)
+        return super().fit(x, *args, callbacks=[lightgbm.log_evaluation], **kwargs)
 
     def predict(self, x, *args, **kwargs):
         x = x.copy()
@@ -266,7 +266,7 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
 
 
 def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False,
-         add_channels=False, cols_to_remove=None, features=None, channels=None, hyperparams=None):
+         add_channels=False, cols_to_remove=None, features=None, channels=None, hyperparams=None, validation=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
     if PARAMETERS.METHOD == 'get_datasets_by_scale':
@@ -327,9 +327,10 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
                 df_train, df_test, y_train, y_test = load_datasets_for_lbp_operator(parent_path)
 
             if add_channels:
-                df_train_channels, df_test_channels = get_channel_features(parent_path)
-                df_train = pd.concat([df_train, df_train_channels], axis=1)
-                df_test = pd.concat([df_test, df_test_channels], axis=1)
+                df_train, df_test = get_channel_features(parent_path)
+                # df_train_channels, df_test_channels = get_channel_features(parent_path)
+                # df_train = pd.concat([df_train, df_train_channels], axis=1)
+                # df_test = pd.concat([df_test, df_test_channels], axis=1)
 
             if extra_features is not None:
                 df_train = pd.concat([df_train, extra_features['train']], axis=1)
@@ -341,6 +342,35 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             df_test = features['x_test']
             y_test = features['y_test']
 
+        if validation:
+
+            preprocess = Preprocess(
+                height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+                width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET]
+            )
+            masks_path = f'../dataset/{PARAMETERS.DATASET}/training/mask/'
+            s = 20 if PARAMETERS.DATASET == 'CHASE' else 14
+            masks = sorted(os.listdir(masks_path))[:s]
+
+            n_pixels = {}
+            for i, mask_path in enumerate(masks):
+                mask = preprocess.read_img(masks_path + mask_path)
+                n_pixels[i] = np.sum(mask > 100)
+
+            pixel_ref = {}
+
+            for k, v in n_pixels.items():
+                upper = np.sum(np.array(list(n_pixels.values()))[:k + 1])
+                pixel_ref[k] = (upper - n_pixels[k], upper)
+
+            train_index = pixel_ref[round(s*.7)][0]
+
+            df_test = df_train.iloc[train_index:, :]
+            y_test = y_train.iloc[train_index:]
+            df_train = df_train.iloc[:train_index, :]
+            y_train = y_train.iloc[:train_index]
+
+        print('Columns:', df_train.columns)
         if df_train.shape[1] > 0:
             if cols_to_remove is not None:
                 df_train = df_train.drop(columns=cols_to_remove)
@@ -369,9 +399,17 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             df_train['recurrence_0'] = 0
             df_train['recurrence_1'] = 0
             df_train['recurrence_2'] = 0
-            preprocess = Preprocess(height=608, width=576)
-            masks_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/mask/'
-            masks = sorted(os.listdir(masks_path))[:14]
+            preprocess = Preprocess(
+                height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+                width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET]
+            )
+            masks_path = f'../dataset/{PARAMETERS.DATASET}/training/mask/'
+            sa = 20 if PARAMETERS.DATASET == 'CHASE' else 14
+            sb = 28 if PARAMETERS.DATASET == 'CHASE' else 20
+            if validation:
+                sa = round(sa*.7)
+                sb = round(sb*.7)
+            masks = sorted(os.listdir(masks_path))[:sa]
             for mask_path in masks:
                 mask = preprocess.read_img(masks_path + mask_path)
                 n_pixels_img = np.sum(mask > 100)
@@ -404,7 +442,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             df_test['recurrence_1'] = 0
             df_test['recurrence_2'] = 0
             i = 0
-            masks = sorted(os.listdir(masks_path))[14:]
+            masks = sorted(os.listdir(masks_path))[sa:sb]
             for mask_path in masks:
                 mask = preprocess.read_img(masks_path + mask_path)
                 n_pixels_img = np.sum(mask > 100)
@@ -450,11 +488,21 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
 
     if PARAMETERS.PLOT and flag:
         label_predicted = np.array(y_predicted)
-        preprocess = Preprocess(height=608, width=576)
+        preprocess = Preprocess(
+            height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+            width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET]
+        )
+        # masks_path = f'../dataset/{PARAMETERS.DATASET}/training/mask/'
+        sa = 20 if PARAMETERS.DATASET == 'CHASE' else 14
+        sb = 28 if PARAMETERS.DATASET == 'CHASE' else 20
+        if validation:
+            sa = round(sa*.7)
+            sb = round(sb*.7)
+        # preprocess = Preprocess(height=608, width=576)
         images_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/images/'
-        images = sorted(os.listdir(images_path))[14:]
+        images = sorted(os.listdir(images_path))[sa:sb]
         masks_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/mask/'
-        masks = sorted(os.listdir(masks_path))[14:]
+        masks = sorted(os.listdir(masks_path))[sa:sb]
         for image_path, mask_path in zip(images, masks):
             img = preprocess.read_img(images_path + image_path).ravel()
             mask = preprocess.read_img(masks_path + mask_path)

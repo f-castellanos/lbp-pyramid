@@ -42,29 +42,35 @@ def f1_score_w(y_true, y_pred, w):
 
 
 # CLF = MultinomialNB(fit_prior=True)
-PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/training/images'
-MASK_PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/training/mask'
-LABELS_PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/training/1st_manual'
+PATH = rf'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/{PARAMETERS.DATASET}/training/images'
+MASK_PATH = rf'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/{PARAMETERS.DATASET}/training/mask'
+LABELS_PATH = rf'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/{PARAMETERS.DATASET}/training/1st_manual'
+
+TRAIN_SIZE = 20 if PARAMETERS.DATASET == 'CHASE' else 14
 
 
 def load_images():
-    paths = [f"{PATH}/{path}" for path in sorted(listdir(PATH))][:14]
-    # return [Preprocess.img_processing(np.asarray(Image.open(path).convert('RGB'))[:, :, 1])
-    return [np.asarray(Image.open(path).convert('RGB'))[:, :, 1]  # TODO: ¿probar con clahe (igualación del contraste)?
-            for path in paths]
+    paths = [f"{PATH}/{path}" for path in sorted(listdir(PATH))][:TRAIN_SIZE]
+    return [np.asarray(Image.open(path).convert('RGB'))[:, :, 1] for path in paths]
+
+
+def load_images_blue():
+    paths = [f"{PATH}/{path}" for path in sorted(listdir(PATH))][:TRAIN_SIZE]
+    return [np.asarray(Image.open(path).convert('RGB'))[:, :, 2] for path in paths]
 
 
 def load_masks():
-    paths = [f"{MASK_PATH}/{path}" for path in sorted(listdir(MASK_PATH))][:14]
+    paths = [f"{MASK_PATH}/{path}" for path in sorted(listdir(MASK_PATH))][:TRAIN_SIZE]
     return [np.asarray(Image.open(path).convert('L')) > 100 for path in paths]
 
 
 def load_labels():
-    paths = [f"{LABELS_PATH}/{path}" for path in sorted(listdir(LABELS_PATH))][:14]
+    paths = [f"{LABELS_PATH}/{path}" for path in sorted(listdir(LABELS_PATH))][:TRAIN_SIZE]
     return [np.asarray(Image.open(path).convert('L')) > 30 for path in paths]
 
 
 IMAGES = load_images()
+IMAGES_B = load_images_blue()
 MASKS = load_masks()
 
 P_OBJ = Preprocess(
@@ -98,18 +104,19 @@ Y_TEST = Y_TEST_FULL[TEST_INDEX]
 # plt.show()
 # print('b')
 
-PREPROCESSED_IMG = [pd.DataFrame(Preprocess.img_processing(img, params=[37, 8, 15, 132, 45, 7, 66, 41]).ravel(), columns=['p']) for img in IMAGES[:10]]
+PREPROCESSED_IMG = [pd.DataFrame(P_OBJ.img_processing(img, params=[37, 8, 15, 132, 45, 7, 66, 41]).ravel(), columns=['p']) for img in IMAGES[:round(TRAIN_SIZE*0.7)]]
 X_TRAIN_P = pd.concat(PREPROCESSED_IMG, ignore_index=True).iloc[TRAIN_INDEX, :]
-PREPROCESSED_IMG = [pd.DataFrame(Preprocess.img_processing(img, params=[37, 8, 15, 132, 45, 7, 66, 41]).ravel(), columns=['p']) for img in IMAGES[10:]]
+PREPROCESSED_IMG = [pd.DataFrame(P_OBJ.img_processing(img, params=[37, 8, 15, 132, 45, 7, 66, 41]).ravel(), columns=['p']) for img in IMAGES[round(TRAIN_SIZE*0.7):]]
 X_TEST_P = pd.concat(PREPROCESSED_IMG, ignore_index=True).iloc[TEST_INDEX, :]
 
 
-with open(r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/weights.pkl', mode='rb') as f:
-    W_TRAIN_FULL, W_TEST_FULL = pickle.load(f)
-    W_TRAIN_FULL[W_TRAIN_FULL == 0] = 0.3
-    W_TEST_FULL[W_TEST_FULL == 0] = 0.3
-W_TRAIN = W_TRAIN_FULL[TRAIN_INDEX]
-W_TEST = W_TEST_FULL[TEST_INDEX]
+if PARAMETERS.DATASET == 'DRIVE':
+    with open(r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/weights.pkl', mode='rb') as f:
+        W_TRAIN_FULL, W_TEST_FULL = pickle.load(f)
+        W_TRAIN_FULL[W_TRAIN_FULL == 0] = 0.3
+        W_TEST_FULL[W_TEST_FULL == 0] = 0.3
+    W_TRAIN = W_TRAIN_FULL[TRAIN_INDEX]
+    W_TEST = W_TEST_FULL[TEST_INDEX]
 
 
 def lgb_f1_score_w(y_hat, data):
@@ -119,7 +126,7 @@ def lgb_f1_score_w(y_hat, data):
 
 
 def f1(individual, n_kernels, k_size, *_, **__):
-    features = [pd.DataFrame()]*14
+    features = [pd.DataFrame()]*TRAIN_SIZE
     count = 0
     for j, ks in enumerate(k_size):
         k_len = int(ks**2)
@@ -131,9 +138,9 @@ def f1(individual, n_kernels, k_size, *_, **__):
             for img, mask, feat_df in zip(IMAGES, MASKS, features)
         ]
         count += k_len * (n_kernels // len(k_size))
-    CLF.fit(pd.concat(features[:10], ignore_index=True).iloc[TRAIN_INDEX, :], Y_TRAIN, eval_metric=lgb_f1_score)
+    CLF.fit(pd.concat(features[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :], Y_TRAIN, eval_metric=lgb_f1_score)
     # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
-    y_pred = CLF.predict(pd.concat(features[10:], ignore_index=True).iloc[TEST_INDEX, :])
+    y_pred = CLF.predict(pd.concat(features[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :])
     return f1_score(Y_TEST, y_pred)
 
 
@@ -143,14 +150,36 @@ def f1_preprocess(individual, *_, **__):
     individual[4] = max(1, individual[4])
     # print(individual)
     features = [
-        pd.DataFrame(Preprocess.img_processing(np.asarray(img), params=individual)[mask])
+        pd.DataFrame(P_OBJ.img_processing(np.asarray(img), params=individual)[mask])
         for img, mask in zip(IMAGES, MASKS)
     ]
-    CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
+    CLF.fit(pd.concat(features[:round(TRAIN_SIZE*0.7)], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
     # clf.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
-    y_pred = CLF.predict(pd.concat(features[10:], ignore_index=True))
+    y_pred = CLF.predict(pd.concat(features[round(TRAIN_SIZE*0.7):], ignore_index=True))
     # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
     return f1_score(Y_TEST_FULL, y_pred)
+
+
+def f1_preprocess_gb(individual, *_, **__):
+    # clf = MultinomialNB(fit_prior=True)
+    individual = np.round(individual).astype(int)
+    individual[4] = max(1, individual[4])
+    # print(individual)
+    preprocessed_images = [P_OBJ.img_processing(np.asarray(img), params=individual) for img in IMAGES]
+    preprocessed_images_b = [P_OBJ.img_processing(np.asarray(img), params=individual) for img in IMAGES_B]
+    green_p = [pd.DataFrame(img[mask], columns=['original_green']) for img, mask in zip(preprocessed_images, MASKS)]
+    blue_p = [pd.DataFrame(img[mask], columns=['original_blue']) for img, mask in zip(preprocessed_images_b, MASKS)]
+    df_train = pd.concat([
+        pd.concat(green_p[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(blue_p[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :]
+    ], axis=1)
+    CLF.fit(df_train, Y_TRAIN, eval_metric=lgb_f1_score)
+    df_test = pd.concat([
+        pd.concat(green_p[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(blue_p[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :]
+    ], axis=1)
+    y_pred = CLF.predict(df_test)
+    return f1_score(Y_TEST, y_pred)
 
 
 def f1_preprocess_w(individual, *_, **__):
@@ -159,14 +188,14 @@ def f1_preprocess_w(individual, *_, **__):
     individual[4] = max(1, individual[4])
     # print(individual)
     features = [
-        pd.DataFrame(Preprocess.img_processing(np.asarray(img), params=individual)[mask])
+        pd.DataFrame(P_OBJ.img_processing(np.asarray(img), params=individual)[mask])
         for img, mask in zip(IMAGES, MASKS)
     ]
-    df_train = pd.concat([X_TRAIN_P, pd.concat(features[:10], ignore_index=True).iloc[TRAIN_INDEX, :]], axis=1)
+    df_train = pd.concat([X_TRAIN_P, pd.concat(features[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :]], axis=1)
     # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
     CLF.fit(df_train, Y_TRAIN, sample_weight=W_TRAIN, eval_metric=lgb_f1_score_w)
     # clf.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
-    df_test = pd.concat([X_TEST_P, pd.concat(features[10:], ignore_index=True).iloc[TEST_INDEX, :]], axis=1)
+    df_test = pd.concat([X_TEST_P, pd.concat(features[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :]], axis=1)
     y_pred = CLF.predict(df_test)
     # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
     return f1_score_w(Y_TEST, y_pred, W_TEST)
@@ -176,12 +205,12 @@ def f1_preprocess_lbp(individual, *_, **__):
     # clf = MultinomialNB(fit_prior=True)
     individual = np.round(individual).astype(int)
     individual[4] = max(1, individual[4])
-    preprocessed_images = [Preprocess.img_processing(np.asarray(img), params=individual) for img in IMAGES]
+    preprocessed_images = [P_OBJ.img_processing(np.asarray(img), params=individual) for img in IMAGES]
 
     images = [P_OBJ.rescale_add_borders(img) for img in preprocessed_images]
     i = 2
     images = [
-        Preprocess.rescale(img, (P_OBJ.width // i, P_OBJ.height // i), algorithm=PARAMETERS.INTERPOLATION_ALGORITHM)
+        P_OBJ.rescale(img, (P_OBJ.width // i, P_OBJ.height // i), algorithm=PARAMETERS.INTERPOLATION_ALGORITHM)
         for img in images
     ]
     riu_images = [
@@ -196,17 +225,79 @@ def f1_preprocess_lbp(individual, *_, **__):
     preprocessed_images = [pd.DataFrame(img[mask], columns=['original']) for img, mask in zip(IMAGES, MASKS)]
 
     df_train = pd.concat([
-        pd.concat(preprocessed_images[:10], ignore_index=True).iloc[TRAIN_INDEX, :],
-        pd.concat(riu_images[:10], ignore_index=True).iloc[TRAIN_INDEX, :],
-        pd.concat(var_images[:10], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(preprocessed_images[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(riu_images[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(var_images[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
     ], axis=1)
     # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
     CLF.fit(df_train, Y_TRAIN, eval_metric=lgb_f1_score)
     # clf.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
     df_test = pd.concat([
-        pd.concat(preprocessed_images[10:], ignore_index=True).iloc[TEST_INDEX, :],
-        pd.concat(riu_images[10:], ignore_index=True).iloc[TEST_INDEX, :],
-        pd.concat(var_images[10:], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(preprocessed_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(riu_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(var_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+    ], axis=1)
+    y_pred = CLF.predict(df_test)
+    # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
+    return f1_score(Y_TEST, y_pred)
+
+
+def f1_preprocess_lbp_gb(individual, *_, **__):
+    # clf = MultinomialNB(fit_prior=True)
+    individual = np.round(individual).astype(int)
+    individual[4] = max(1, individual[4])
+    preprocessed_images = [P_OBJ.img_processing(np.asarray(img), params=individual) for img in IMAGES]
+    preprocessed_images_b = [P_OBJ.img_processing(np.asarray(img), params=individual) for img in IMAGES_B]
+
+    images = [P_OBJ.rescale_add_borders(img) for img in preprocessed_images]
+    images_b = [P_OBJ.rescale_add_borders(img) for img in preprocessed_images_b]
+    i = 2
+    images_scaled = [
+        P_OBJ.rescale(img, (P_OBJ.width // i, P_OBJ.height // i), algorithm=PARAMETERS.INTERPOLATION_ALGORITHM)
+        for img in images
+    ]
+    images_scaled_b = [
+        P_OBJ.rescale(img, (P_OBJ.width // i, P_OBJ.height // i), algorithm=PARAMETERS.INTERPOLATION_ALGORITHM)
+        for img in images_b
+    ]
+    riu_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='riu', plot=PARAMETERS.PLOT), i)[mask], columns=['riu_g'])
+        for img, mask in zip(images_scaled, MASKS_B)]
+    var_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='var', plot=PARAMETERS.PLOT), i)[mask], columns=['var_g'])
+        for img, mask in zip(images_scaled, MASKS_B)]
+    riu_images_b = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='riu', plot=PARAMETERS.PLOT), i)[mask], columns=['riu_b'])
+        for img, mask in zip(images_scaled_b, MASKS_B)]
+    var_images_b = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='var', plot=PARAMETERS.PLOT), i)[mask], columns=['var_b'])
+        for img, mask in zip(images_scaled_b, MASKS_B)]
+
+    green_p = [pd.DataFrame(img[mask], columns=['original_green']) for img, mask in zip(preprocessed_images, MASKS)]
+    blue_p = [pd.DataFrame(img[mask], columns=['original_blue']) for img, mask in zip(preprocessed_images_b, MASKS)]
+
+    df_train = pd.concat([
+        pd.concat(green_p[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(blue_p[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(riu_images[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(var_images[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(riu_images_b[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(var_images_b[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+    ], axis=1)
+    # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN_FULL, eval_metric=lgb_f1_score)
+    CLF.fit(df_train, Y_TRAIN, eval_metric=lgb_f1_score)
+    # clf.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
+    df_test = pd.concat([
+        pd.concat(green_p[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(blue_p[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(riu_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(var_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(riu_images_b[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(var_images_b[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
     ], axis=1)
     y_pred = CLF.predict(df_test)
     # y_pred = clf.predict(pd.concat(features[10:], ignore_index=True))
@@ -239,6 +330,8 @@ def fitness_function(*args, **kwargs):
         'RASTRIGIN': rastrigin,
         'F1': f1,
         'PREPROCESS': f1_preprocess,
+        'PREPROCESS_GB': f1_preprocess_gb,
         'PREPROCESS_W': f1_preprocess_w,
-        'PREPROCESS_LBP': f1_preprocess_lbp
+        'PREPROCESS_LBP': f1_preprocess_lbp,
+        'PREPROCESS_LBP_GB': f1_preprocess_lbp_gb
     }[kwargs['function_name']](*args, **kwargs)
