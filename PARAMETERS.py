@@ -12,8 +12,8 @@ Defines the LBP algorithm version to be used.
 · var: rotation invariant variance measures of the contrast of local image texture which is rotation but not gray scale invariant.
 
 """  # noqa
-LBP_METHOD = 'var'
-# LBP_METHOD = 'riu'
+# LBP_METHOD = 'var'
+LBP_METHOD = 'riu'
 # LBP_METHOD = 'default'
 
 """
@@ -82,14 +82,14 @@ ENCODING = 'categorical'
 CONVOLUTION = None
 PREPROCESS_OPTIMIZATION = True
 # PREPROCESS_TYPE = 'default'
-PREPROCESS_TYPE = 'lbp_gb'
+PREPROCESS_TYPE = 'lbp_g_cv'
 # CONVOLUTION = np.round(np.random.uniform(low=-1, high=1, size=(9,)).reshape(3, 3), 3)
 CONV_PATH = None if CONVOLUTION is None else ';'.join(CONVOLUTION.ravel().astype(str))
 CONV_PREPROCESSING = False
 RADIUS = 1
 
 
-CHANNEL = 2
+CHANNEL = 1
 # CHANNEL = None
 
 # Other parameters

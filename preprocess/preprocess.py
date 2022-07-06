@@ -49,6 +49,8 @@ PREPROCESS_PARAMS = {
     'DRIVE_LBP': np.array([59, 43,  0,  9, 96, 17, 16, 64]),
     'DRIVE_LBP_GB': np.array([20,  8, 71, 61, 46, 68, 30, 36]),
     'STARE_LBP_GB': np.array([60, 11, 74, 52, 29, 32, 29, 28]),
+    'STARE_LBP_G': np.array([58, 10, 74, 51, 29, 30, 28, 31]),
+    'STARE_LBP_G_CV': np.array([53,  1, 24, 66, 65, 92, 86,  2]),
 }
 
 
@@ -82,7 +84,8 @@ class Preprocess:
                 self.preprocessed_path += f"_{channels_map[PARAMETERS.CHANNEL]}_channel"
             if PARAMETERS.PREPROCESS_OPTIMIZATION:
                 self.preprocessed_path += f'_optimized' + {
-                    "default": "", "gb": "_gb", "w": "_w", "lbp": "_lbp", 'lbp_gb': "_lbp_gb"
+                    "default": "", "gb": "_gb", "w": "_w", "lbp": "_lbp", 'lbp_gb': "_lbp_gb", 'lbp_g': "_lbp_g",
+                    "lbp_g_cv": "_lbp_g_cv"
                 }[PARAMETERS.PREPROCESS_TYPE]
         else:
             PARAMETERS.CONV_PATH = PARAMETERS.update_convolution_path(PARAMETERS)
@@ -111,7 +114,8 @@ class Preprocess:
                 params = None
                 if PARAMETERS.PREPROCESS_OPTIMIZATION:
                     params = PREPROCESS_PARAMS[PARAMETERS.DATASET + {
-                        "default": "", "gb": "_GB", "w": "_W", "lbp": "_LBP", 'lbp_gb': "_LBP_GB"
+                        "default": "", "gb": "_GB", "w": "_W", "lbp": "_LBP", 'lbp_gb': "_LBP_GB", 'lbp_g': "_LBP_G",
+                        "lbp_g_cv": "_LBP_G_CV"
                     }[PARAMETERS.PREPROCESS_TYPE]]
                 img = Preprocess.img_processing(img, PARAMETERS.PLOT, params=params)
                 img = self.rescale_add_borders(img)

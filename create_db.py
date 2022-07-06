@@ -63,7 +63,9 @@ def main(single_exec=False):
         channels_map = {0: 'red', 1: 'green', 2: 'blue'}
         db_folder = \
             f'DB/{PARAMETERS.DATASET}/extra_features/preprocess_optimization_{channels_map[PARAMETERS.CHANNEL]}' + {
-                "default": "", "gb": "_gb", "w": "_w", "lbp": "_lbp", 'lbp_gb': "_lbp_gb"}[PARAMETERS.PREPROCESS_TYPE]
+                "default": "", "gb": "_gb", "w": "_w", "lbp": "_lbp", 'lbp_gb': "_lbp_gb",  'lbp_g': "_lbp_g",
+                "lbp_g_cv": "_lbp_g_cv"
+            }[PARAMETERS.PREPROCESS_TYPE]
     elif PARAMETERS.CONVOLUTION is None and PARAMETERS.RADIUS > 1:
         db_folder = f'DB/{PARAMETERS.DATASET}/extra_features/radius/{PARAMETERS.RADIUS}'
     elif PARAMETERS.CHANNEL is not None and PARAMETERS.CONVOLUTION is None:

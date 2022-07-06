@@ -72,6 +72,7 @@ def load_labels():
 IMAGES = load_images()
 IMAGES_B = load_images_blue()
 MASKS = load_masks()
+LABELS = load_labels()
 
 P_OBJ = Preprocess(
     lbp_radius=1,
@@ -83,10 +84,10 @@ P_OBJ = Preprocess(
 MASKS_B = [P_OBJ.rescale_add_borders(mask).astype(bool) for mask in MASKS]
 
 Y_TRAIN_FULL = pd.DataFrame(
-    np.concatenate([np.array(label, dtype=int)[MASKS[i]].ravel() for i, label in enumerate(load_labels()) if i < 10],
+    np.concatenate([np.array(label, dtype=int)[MASKS[i]].ravel() for i, label in enumerate(LABELS) if i < 10],
                    axis=0).T).values.ravel()
 Y_TEST_FULL = pd.DataFrame(
-    np.concatenate([np.array(label, dtype=int)[MASKS[i]].ravel() for i, label in enumerate(load_labels()) if i >= 10],
+    np.concatenate([np.array(label, dtype=int)[MASKS[i]].ravel() for i, label in enumerate(LABELS) if i >= 10],
                    axis=0).T).values.ravel()
 
 # TRAIN_INDEX, _ = train_test_split(np.arange(Y_TRAIN.shape[0]), test_size=0.5, random_state=42, stratify=Y_TRAIN)
@@ -304,6 +305,96 @@ def f1_preprocess_lbp_gb(individual, *_, **__):
     return f1_score(Y_TEST, y_pred)
 
 
+def f1_preprocess_lbp_g(individual, *_, **__):
+    individual = np.round(individual).astype(int)
+    individual[4] = max(1, individual[4])
+    preprocessed_images = [P_OBJ.img_processing(np.asarray(img), params=individual) for img in IMAGES]
+    images = [P_OBJ.rescale_add_borders(img) for img in preprocessed_images]
+    i = 2
+    images_scaled = [
+        P_OBJ.rescale(img, (P_OBJ.width // i, P_OBJ.height // i), algorithm=PARAMETERS.INTERPOLATION_ALGORITHM)
+        for img in images
+    ]
+    riu_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='riu', plot=PARAMETERS.PLOT), i)[mask], columns=['riu_g'])
+        for img, mask in zip(images_scaled, MASKS_B)]
+    var_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='var', plot=PARAMETERS.PLOT), i)[mask], columns=['var_g'])
+        for img, mask in zip(images_scaled, MASKS_B)]
+
+    green_p = [pd.DataFrame(img[mask], columns=['original_green']) for img, mask in zip(preprocessed_images, MASKS)]
+
+    df_train = pd.concat([
+        pd.concat(green_p[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(riu_images[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+        pd.concat(var_images[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :],
+    ], axis=1)
+    CLF.fit(df_train, Y_TRAIN, eval_metric=lgb_f1_score)
+    df_test = pd.concat([
+        pd.concat(green_p[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(riu_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+        pd.concat(var_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
+    ], axis=1)
+    y_pred = CLF.predict(df_test)
+    return f1_score(Y_TEST, y_pred)
+
+
+Y_IMG = []
+IDX_IMG = []
+for j in range(TRAIN_SIZE):
+    y = pd.DataFrame(np.array(LABELS[j], dtype=int)[MASKS[j]].ravel())
+    idx = train_test_split(np.arange(y.shape[0]), test_size=0.01, random_state=42, stratify=y)[0]
+    Y_IMG.append(y.iloc[idx, :])
+    IDX_IMG.append(idx)
+
+Y_CV = []
+for j in range(TRAIN_SIZE):
+    Y_CV.append(pd.concat([item for l, item in enumerate(Y_IMG) if l != j], ignore_index=True))
+
+
+def f1_preprocess_lbp_g_cv(individual, *_, **__):
+    individual = np.round(individual).astype(int)
+    individual[4] = max(1, individual[4])
+    preprocessed_images = [P_OBJ.img_processing(np.asarray(img), params=individual) for img in IMAGES]
+    images = [P_OBJ.rescale_add_borders(img) for img in preprocessed_images]
+    i = 2
+    images_scaled = [
+        P_OBJ.rescale(img, (P_OBJ.width // i, P_OBJ.height // i), algorithm=PARAMETERS.INTERPOLATION_ALGORITHM)
+        for img in images
+    ]
+    riu_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='riu', plot=PARAMETERS.PLOT), i)[mask], columns=['riu_g'])
+        for img, mask in zip(images_scaled, MASKS_B)]
+    var_images = [
+        pd.DataFrame(
+            P_OBJ.repeat_pixels(P_OBJ.apply_lbp(img, method='var', plot=PARAMETERS.PLOT), i)[mask], columns=['var_g'])
+        for img, mask in zip(images_scaled, MASKS_B)]
+
+
+    green_p = [pd.DataFrame(img[mask], columns=['original_green']) for img, mask in zip(preprocessed_images, MASKS)]
+
+    f1_score_list = []
+    for j in range(TRAIN_SIZE):
+        df_train = pd.concat([
+            pd.concat([item.iloc[IDX_IMG[l], :] for l, item in enumerate(green_p) if l != j], ignore_index=True),
+            pd.concat([item.iloc[IDX_IMG[l], :] for l, item in enumerate(riu_images) if l != j], ignore_index=True),
+            pd.concat([item.iloc[IDX_IMG[l], :] for l, item in enumerate(var_images) if l != j], ignore_index=True),
+        ], axis=1)
+        CLF.fit(df_train, Y_CV[j].values.ravel(), eval_metric=lgb_f1_score)
+        df_test = pd.concat([
+            green_p[j].iloc[IDX_IMG[j], :],
+            riu_images[j].iloc[IDX_IMG[j], :],
+            var_images[j].iloc[IDX_IMG[j], :],
+        ], axis=1)
+        y_pred = CLF.predict(df_test)
+        f1_score_list.append(f1_score(Y_IMG[j].values.ravel(), y_pred))
+
+    return (min(f1_score_list) + sum(f1_score_list)/len(f1_score_list))/2
+
+
 # def fitness_function(x, *_, **__):
 #     """
 #     Six-Hump Camel-Back Function
@@ -333,5 +424,7 @@ def fitness_function(*args, **kwargs):
         'PREPROCESS_GB': f1_preprocess_gb,
         'PREPROCESS_W': f1_preprocess_w,
         'PREPROCESS_LBP': f1_preprocess_lbp,
-        'PREPROCESS_LBP_GB': f1_preprocess_lbp_gb
+        'PREPROCESS_LBP_GB': f1_preprocess_lbp_gb,
+        'PREPROCESS_LBP_G': f1_preprocess_lbp_g,
+        'PREPROCESS_LBP_G_CV': f1_preprocess_lbp_g_cv,
     }[kwargs['function_name']](*args, **kwargs)

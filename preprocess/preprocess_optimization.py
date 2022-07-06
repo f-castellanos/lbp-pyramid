@@ -17,10 +17,13 @@ kwargs = {
 
 dev = EvolutionaryKernelOptimization(**kwargs)
 # dev.fitness_function = 'PREPROCESS'
-dev.fitness_function = 'PREPROCESS_LBP_GB'
+dev.fitness_function = 'PREPROCESS_LBP_G_CV'
+# dev.fitness_function = 'PREPROCESS_LBP_G'
+# dev.fitness_function = 'PREPROCESS_LBP_GB'
 # dev.fitness_function = 'PREPROCESS_GB'
 # dev.fitness_function = 'PREPROCESS_W'
 # dev.fitness_function = 'PREPROCESS_LBP'
 dev.init_population()
 # dev.optimize(iterations=5, plot='lineal', save_results=True)
-dev.optimize(iterations=100, plot='lineal', save_results=True)
+dev.optimize(iterations=70, plot='lineal', save_results=True)
+# dev.optimize(iterations=100, plot='lineal', save_results=True)

@@ -327,30 +327,30 @@ if __name__ == "__main__":
 # a = np.array([0.7229746483530723, 0.08515192263657567, 0.5182647054318817, -0.577948184085242, -0.9989541553663077, -0.46437588131189556, -0.015762936300529815, -0.35556680561587284, 1.0, -0.03396069276807806, 1.0, 0.03233413612776116, 0.15589639839299552, 0.790919536475375, 0.006393604211677433, -0.001971978111566875, -0.07670632347266587, -0.44206823803265893])
 # k1 = a[:9].reshape(3, 3)
 # k2 = a[9:].reshape(3, 3)
-#
-# PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/DRIVE/training/images'
-# path = PATH + '/35_training.tif'
+# #
+# PATH = r'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/STARE/training/images'
+# path = PATH + '/im0001.ppm'
 #
 # from os import listdir
 # import cv2
 # import numpy as np
 # import pandas as pd
 # from PIL import Image
-# from sklearn.naive_bayes import MultinomialNB
-# from sklearn.metrics import f1_score
+# # from sklearn.naive_bayes import MultinomialNB
+# # from sklearn.metrics import f1_score
 # from preprocess.preprocess import Preprocess
-#
+# #
 # img = Preprocess.img_processing(np.asarray(Image.open(path).convert('RGB'))[:, :, 1])
-# img_k1 = cv2.filter2D(img, -1, k1)
-# img_k2 = cv2.filter2D(img, -1, k2)
+# # img_k1 = cv2.filter2D(img, -1, k1)
+# # img_k2 = cv2.filter2D(img, -1, k2)
 # import matplotlib.pyplot as plt
-# from PIL import Image
-# from fitness import IMAGES
-#
-# im1 = Image.fromarray(np.uint8(img_k1))
-# # plt.figure(figsize=(15, 11), dpi=80)
-# # plt.imshow(im, cmap='gray')
-# # plt.show()
+# # from PIL import Image
+# # from fitness import IMAGES
+# #
+# im = Image.fromarray(np.uint8(img))
+# plt.figure(figsize=(15, 11), dpi=80)
+# plt.imshow(im, cmap='gray')
+# plt.show()
 #
 # im2 = Image.fromarray(np.uint8(img_k2))
 # # plt.figure(figsize=(15, 11), dpi=80)
