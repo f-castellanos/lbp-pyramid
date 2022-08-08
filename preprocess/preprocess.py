@@ -24,7 +24,7 @@ class ParameterError(Exception):
 
 VALID_PARAMETERS = {
     # 'LBP_METHOD': ['var'],
-    'LBP_METHOD': ['riu', 'var'],
+    'LBP_METHOD': ['riu', 'var', 'default'],
     # 'LBP_METHOD': ['default', 'riu', 'riu2', 'nriuniform', 'var'],
     'METHOD': ['get_pyramid_dataset'],
     # 'METHOD': ['get_pyramid_dataset', 'get_datasets_by_scale'],
@@ -43,29 +43,52 @@ VALID_PARAMETERS = {
 
 PARENT_PATH = str(Path(os.path.dirname(os.path.abspath(__file__))).parent.parent)
 PREPROCESS_PARAMS = {
-    # 'DRIVE': np.array([37, 8, 15, 132, 45, 7, 66, 41]),  # AE antiguo
     'DRIVE_GB': np.array([23,  7, 64, 65, 40, 54, 38, 42]),
     'DRIVE_W': np.array([35,   7,  24, 166,  45,   4,  86,  35]),
     'DRIVE_LBP': np.array([59, 43,  0,  9, 96, 17, 16, 64]),
     'DRIVE_LBP_GB': np.array([20,  8, 71, 61, 46, 68, 30, 36]),
+    'DRIVE_LBP_G': np.array([41,  6, 46, 60, 32, 32, 42, 47]),
+    'DRIVE_TEST_GB': np.array([23,  7, 64, 65, 40, 54, 38, 42]),
+    'DRIVE_TEST_W': np.array([35,   7,  24, 166,  45,   4,  86,  35]),
+    'DRIVE_TEST_LBP': np.array([59, 43,  0,  9, 96, 17, 16, 64]),
+    'DRIVE_TEST_LBP_GB': np.array([20,  8, 71, 61, 46, 68, 30, 36]),
+    'DRIVE_TEST_LBP_G': np.array([41,  6, 46, 60, 32, 32, 42, 47]),
     'STARE_LBP_GB': np.array([60, 11, 74, 52, 29, 32, 29, 28]),
     'STARE_LBP_G': np.array([58, 10, 74, 51, 29, 30, 28, 31]),
     'STARE_LBP_G_CV': np.array([53,  1, 24, 66, 65, 92, 86,  2]),
+    'STARE_LBP_G_FOLD_0_of_5': np.array([47,  6, 45, 58, 35, 38, 51, 41]),
+    'STARE_LBP_G_FOLD_1_of_5': np.array([41,  7, 46, 57, 37, 39, 46, 34]),
+    'STARE_LBP_G_FOLD_2_of_5': np.array([55, 11, 38, 39, 46, 23, 15, 60]),
+    'STARE_LBP_G_FOLD_3_of_5': np.array([53, 11, 26, 56, 44, 41, 43, 43]),
+    'STARE_LBP_G_FOLD_4_of_5': np.array([41, 11, 85, 60, 54, 72,  6, 34]),
+    'CHASE_LBP_G': np.array([25,  6, 43, 76, 35, 38, 32, 44]),
 }
 
 
 class Preprocess:
-    def __init__(self, height, width, balance=False, lbp_radius=1,
+    def __init__(self, height, width, balance=False, lbp_radius=1, fold=None,
                  lbp_method='default', mask_threshold=100, label_threshold=30):
         self.height = height
         self.width = width
         self.balance = balance
-        self.original_height = {'DRIVE': 584, 'CHASE': 960, 'STARE': 605}[PARAMETERS.DATASET]
-        self.original_width = {'DRIVE': 565, 'CHASE': 999, 'STARE': 700}[PARAMETERS.DATASET]
+        self.original_height = {'DRIVE': 584, 'DRIVE_TEST': 584, 'CHASE': 960, 'STARE': 605}[PARAMETERS.DATASET]
+        self.original_width = {'DRIVE': 565, 'DRIVE_TEST': 565, 'CHASE': 999, 'STARE': 700}[PARAMETERS.DATASET]
         self.mask_threshold = mask_threshold
         self.label_threshold = label_threshold
         self.lbp_radius = lbp_radius
         self.lbp_method = lbp_method
+        self.fold = fold
+        self.img_order = {
+            'DRIVE': np.arange(20),
+            'DRIVE_TEST': np.arange(20),
+            'CHASE': np.arange(28),
+            'STARE': np.array([3, 16, 6, 10, 2, 14, 4, 17, 7, 1, 13, 0, 19, 18, 9, 15, 8, 12, 11, 5]) if fold is not None else np.arange(20)  # noqa
+        }[PARAMETERS.DATASET]
+        self.fold_size = None
+        if fold is not None:
+            dataset_size = {'DRIVE': 20, 'DRIVE_TEST': 20, 'CHASE': 28, 'STARE': 20}[PARAMETERS.DATASET]
+            self.fold_size = dataset_size - int(dataset_size - dataset_size/PARAMETERS.FOLDS)
+            self.img_order = np.roll(self.img_order, np.arange(0, dataset_size, self.fold_size)[fold])
         self.parameters_verification()
         self.training_path = None
         self.images_path = None
@@ -74,9 +97,11 @@ class Preprocess:
         self.original_preprocessed_path = None
 
     def compute_preprocessing(self, filenames, mask_filenames, main_path):
-        self.training_path = f"{main_path}"
+        self.training_path = main_path
         self.images_path = f"{self.training_path}images"
         self.masks_path = f"{self.training_path}mask"
+        if self.fold is not None:
+            self.training_path += f'fold_{self.fold}_of_{PARAMETERS.FOLDS}/'
         if PARAMETERS.CONVOLUTION is None:
             self.preprocessed_path = f"{self.training_path}preprocessed"
             if PARAMETERS.CHANNEL is not None:
@@ -85,7 +110,7 @@ class Preprocess:
             if PARAMETERS.PREPROCESS_OPTIMIZATION:
                 self.preprocessed_path += f'_optimized' + {
                     "default": "", "gb": "_gb", "w": "_w", "lbp": "_lbp", 'lbp_gb': "_lbp_gb", 'lbp_g': "_lbp_g",
-                    "lbp_g_cv": "_lbp_g_cv"
+                    "lbp_g_cv": "_lbp_g_cv", "lbp_g_fold": "_lbp_g"
                 }[PARAMETERS.PREPROCESS_TYPE]
         else:
             PARAMETERS.CONV_PATH = PARAMETERS.update_convolution_path(PARAMETERS)
@@ -115,7 +140,7 @@ class Preprocess:
                 if PARAMETERS.PREPROCESS_OPTIMIZATION:
                     params = PREPROCESS_PARAMS[PARAMETERS.DATASET + {
                         "default": "", "gb": "_GB", "w": "_W", "lbp": "_LBP", 'lbp_gb': "_LBP_GB", 'lbp_g': "_LBP_G",
-                        "lbp_g_cv": "_LBP_G_CV"
+                        "lbp_g_cv": "_LBP_G_CV", "lbp_g_fold": f"_LBP_G_FOLD_{self.fold}_of_{PARAMETERS.FOLDS}",
                     }[PARAMETERS.PREPROCESS_TYPE]]
                 img = Preprocess.img_processing(img, PARAMETERS.PLOT, params=params)
                 img = self.rescale_add_borders(img)
@@ -125,7 +150,8 @@ class Preprocess:
                     im = Image.fromarray(img_resized)
                     im.save(f"{algorithm_path}/{filename.split('.')[0]}_{i}.jpeg")
             else:
-                for i in float(2) ** np.arange(-1, 6):
+                for i in float(2) ** np.arange(-1, 7):
+                # for i in float(2) ** np.arange(-1, 6):
                     if PARAMETERS.CONV_PREPROCESSING:
                         img = Preprocess.read_img(f"{self.original_preprocessed_path}/{algorithm}/original/{filename.split('.')[0]}_{i}.jpeg")  # noqa
                     else:
@@ -162,20 +188,31 @@ class Preprocess:
                     with bz2.BZ2File(f"{lbp_path}/{new_filename}", 'wb') as f:
                         pickle.dump(img_lbp, f)
                 # Processing of radius 2-4
-                for r in range(2, 5):
-                    # riu with r > 2 freezes the process
-                    if (not os.path.isfile(f"{lbp_path}_{r}/{new_filename}")) and lbp_operator != 'riu':
-                        if not os.path.exists(f"{lbp_path}_{r}"):
-                            os.makedirs(f"{lbp_path}_{r}")
-                        if PARAMETERS.CONVOLUTION is None:
+                if PARAMETERS.MULTI_RADIUS:
+                    for r in range(2, 6):
+                    # for r in range(2, 5):
+                        # riu with r > 2 freezes the process
+                        if (not os.path.isfile(f"{lbp_path}_{r}/{new_filename}")) and lbp_operator != 'riu':
+                            if not os.path.exists(f"{lbp_path}_{r}"):
+                                os.makedirs(f"{lbp_path}_{r}")
+                            if PARAMETERS.CONVOLUTION is None:
+                                img = Preprocess.read_img(filename)
+                                img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=r)
+                            else:
+                                with bz2.BZ2File(filename.replace('.jpeg', '.pkl'), 'rb') as f:
+                                    img = pickle.load(f)
+                                img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=r)
+                            with bz2.BZ2File(f"{lbp_path}_{r}/{new_filename}", 'wb') as f:
+                                pickle.dump(img_lbp, f)
+                if PARAMETERS.RADIUS > 1:
+                    for r in range(2, 7):
+                        if not os.path.isfile(f"{lbp_path}_{r}/{new_filename}") and lbp_operator == PARAMETERS.LBP_METHOD:
+                            if not os.path.exists(f"{lbp_path}_{r}"):
+                                os.makedirs(f"{lbp_path}_{r}")
                             img = Preprocess.read_img(filename)
                             img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=r)
-                        else:
-                            with bz2.BZ2File(filename.replace('.jpeg', '.pkl'), 'rb') as f:
-                                img = pickle.load(f)
-                            img_lbp = self.apply_lbp(img, method=lbp_operator, plot=PARAMETERS.PLOT, r=r)
-                        with bz2.BZ2File(f"{lbp_path}_{r}/{new_filename}", 'wb') as f:
-                            pickle.dump(img_lbp, f)
+                            with bz2.BZ2File(f"{lbp_path}_{r}/{new_filename}", 'wb') as f:
+                                pickle.dump(img_lbp, f)
 
     @staticmethod
     def parameters_verification():
@@ -284,7 +321,8 @@ class Preprocess:
         x = np.array([[0, 1], [2, 3]])
         j_indexes = np.tile(x, (img.shape[0]//2, img.shape[1]//2))
 
-        reshaped_img = np.zeros((img.shape[0]*img.shape[1] // 4, 4), dtype='uint8')
+        reshaped_img = np.zeros((img.shape[0]*img.shape[1] // 4, 4))
+        # reshaped_img = np.zeros((img.shape[0]*img.shape[1] // 4, 4), dtype='uint8')
         for v, i, j in zip(img.ravel(), i_indexes.ravel(), j_indexes.ravel()):
             reshaped_img[i, j] = v
 

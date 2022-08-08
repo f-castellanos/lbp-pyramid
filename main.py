@@ -265,7 +265,7 @@ def load_datasets_for_lbp_operator(parent_path, discard_columns=False):
     return df_train_temp, df_test_temp, y_train_temp, y_test_temp
 
 
-def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False,
+def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence=False, opt_threshold=False, fold=None,
          add_channels=False, cols_to_remove=None, features=None, channels=None, hyperparams=None, validation=False):
     parent_path = str(Path(os.path.dirname(os.path.abspath(__file__))).parent)
     flag = True
@@ -345,12 +345,14 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
         if validation:
 
             preprocess = Preprocess(
-                height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
-                width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET]
+                height={'DRIVE': 608, 'DRIVE_TEST': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+                width={'DRIVE': 576, 'DRIVE_TEST': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET],
+                fold=fold
             )
             masks_path = f'../dataset/{PARAMETERS.DATASET}/training/mask/'
             s = 20 if PARAMETERS.DATASET == 'CHASE' else 14
-            masks = sorted(os.listdir(masks_path))[:s]
+            masks = sorted(os.listdir(masks_path))
+            masks = [masks[i_position] for i_position in preprocess.img_order][:s]
 
             n_pixels = {}
             for i, mask_path in enumerate(masks):
@@ -390,7 +392,6 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
                 mask_mat[mask_mat >= 100] = arr.ravel()
                 return mask_mat
 
-            i = 0
             label_predicted = np.array(clf.predict_proba(df_train)[:, 1] * 100, np.uint8)
             df_train['recurrence_lbp'] = 0
             df_train['recurrence_lbp_1'] = 0
@@ -400,19 +401,34 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             df_train['recurrence_1'] = 0
             df_train['recurrence_2'] = 0
             preprocess = Preprocess(
-                height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
-                width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET]
+                height={'DRIVE': 608, 'DRIVE_TEST': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+                width={'DRIVE': 576, 'DRIVE_TEST': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET],
+                fold=fold
             )
-            masks_path = f'../dataset/{PARAMETERS.DATASET}/training/mask/'
-            sa = 20 if PARAMETERS.DATASET == 'CHASE' else 14
-            sb = 28 if PARAMETERS.DATASET == 'CHASE' else 20
-            if validation:
-                sa = round(sa*.7)
-                sb = round(sb*.7)
-            masks = sorted(os.listdir(masks_path))[:sa]
+            if PARAMETERS.DATASET != 'DRIVE_TEST':
+                masks_path = f'../dataset/{PARAMETERS.DATASET}/training/mask/'
+                sa = 20 if PARAMETERS.DATASET == 'CHASE' else 14
+                sb = 28 if PARAMETERS.DATASET == 'CHASE' else 20
+                if validation:
+                    sa = round(sa*.7)
+                    sb = round(sb*.7)
+                if PARAMETERS.FOLDS is not False:
+                    dataset_size = {'DRIVE': 20, 'DRIVE_TEST': 20, 'CHASE': 28, 'STARE': 20}[PARAMETERS.DATASET]
+                    sa = int(dataset_size - dataset_size/PARAMETERS.FOLDS)
+            else:
+                masks_path = f'../dataset/DRIVE/training/mask/'
+                sa = 20
+                sb = 20
+            masks = sorted(os.listdir(masks_path))
+            masks = [masks[i_position] for i_position in preprocess.img_order][:sa]
+            i = 0
+            # print(sa)
             for mask_path in masks:
+                # print(i)
+                # print(mask_path)
                 mask = preprocess.read_img(masks_path + mask_path)
                 n_pixels_img = np.sum(mask > 100)
+                # print(n_pixels_img)
                 img_predictions = array_to_mat(label_predicted[i:i + n_pixels_img], mask.copy())
                 df_train['recurrence_lbp'].iloc[i:i + n_pixels_img] = \
                 lbp.lbp(cv2.filter2D(img_predictions / 10, -1, np.ones((3, 3))))[mask > 100].ravel()  # noqa
@@ -442,7 +458,12 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             df_test['recurrence_1'] = 0
             df_test['recurrence_2'] = 0
             i = 0
-            masks = sorted(os.listdir(masks_path))[sa:sb]
+            if PARAMETERS.DATASET == 'DRIVE_TEST':
+                sa = 0
+                sb = 20
+                masks_path = f'../dataset/DRIVE_TEST/training/mask/'
+            masks = sorted(os.listdir(masks_path))
+            masks = [masks[i_position] for i_position in preprocess.img_order][sa:sb]
             for mask_path in masks:
                 mask = preprocess.read_img(masks_path + mask_path)
                 n_pixels_img = np.sum(mask > 100)
@@ -489,8 +510,9 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
     if PARAMETERS.PLOT and flag:
         label_predicted = np.array(y_predicted)
         preprocess = Preprocess(
-            height={'DRIVE': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
-            width={'DRIVE': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET]
+            height={'DRIVE': 608, 'DRIVE_TEST': 608, 'CHASE': 960, 'STARE': 608}[PARAMETERS.DATASET],
+            width={'DRIVE': 576, 'DRIVE_TEST': 576, 'CHASE': 1024, 'STARE': 704}[PARAMETERS.DATASET],
+            fold=fold
         )
         # masks_path = f'../dataset/{PARAMETERS.DATASET}/training/mask/'
         sa = 20 if PARAMETERS.DATASET == 'CHASE' else 14
@@ -498,11 +520,22 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
         if validation:
             sa = round(sa*.7)
             sb = round(sb*.7)
+        if PARAMETERS.FOLDS is not False:
+            dataset_size = {'DRIVE': 20, 'DRIVE_TEST': 20, 'CHASE': 28, 'STARE': 20}[PARAMETERS.DATASET]
+            sa = int(dataset_size - dataset_size/PARAMETERS.FOLDS)
+        if PARAMETERS.DATASET == 'DRIVE_TEST':
+            sa = 0
+            sb = 20
         # preprocess = Preprocess(height=608, width=576)
         images_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/images/'
-        images = sorted(os.listdir(images_path))[sa:sb]
+        images = sorted(os.listdir(images_path))
+        # print(sa, sb, len(images), preprocess.img_order)
+        images = [images[i_position] for i_position in preprocess.img_order][sa:sb]
         masks_path = f'{parent_path}/dataset/{PARAMETERS.DATASET}/training/mask/'
-        masks = sorted(os.listdir(masks_path))[sa:sb]
+        masks = sorted(os.listdir(masks_path))
+        masks = [masks[i_position] for i_position in preprocess.img_order][sa:sb]
+        channel_temp = PARAMETERS.CHANNEL
+        PARAMETERS.CHANNEL = None
         for image_path, mask_path in zip(images, masks):
             img = preprocess.read_img(images_path + image_path).ravel()
             mask = preprocess.read_img(masks_path + mask_path)
@@ -511,6 +544,7 @@ def main(lgb='', plot_once=False, extra_features=None, all_lbp=False, recurrence
             label_predicted = np.delete(label_predicted, np.arange(len(img)))
             if plot_once:
                 break
+        PARAMETERS.CHANNEL = channel_temp
 
     if flag:
         acc = accuracy_score(y_test, y_predicted)

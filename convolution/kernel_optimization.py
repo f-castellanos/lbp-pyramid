@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 np.random.seed(1)
 FITNESS_FUNCTION = 'F1'
+# FITNESS_FUNCTION = 'F1_FOLD'
 MIN_MAX = {'min': np.min, 'max': np.max}
 MIN_MAX_R = {'min': np.max, 'max': np.min}
 ARG_MIN_MAX = {'min': np.argmin, 'max': np.argmax}
@@ -27,7 +28,7 @@ def elitism_comparison(v1, v2, method):
 
 
 class EvolutionaryKernelOptimization:
-    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3, apply_abs=False,
+    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3, apply_abs=False, fold=None,
                  method='max', clip_v=1, k=3, mutation_proba=.05, recombination_proba=.2, n_jobs=6):
         self.p_size = p_size
         self.p_n_kernels = p_n_kernels
@@ -62,6 +63,8 @@ class EvolutionaryKernelOptimization:
         # self.n_jobs = 1
         self.n_jobs = n_jobs
         self.method = method
+
+        self.fold = fold
 
         # self.init_population()
         # import matplotlib.pyplot as plt
@@ -175,7 +178,8 @@ KERNELS
                 population[fitness == -1, :],
                 n_kernels=self.p_n_kernels,
                 k_size=self.k_size,
-                function_name=self.fitness_function
+                function_name=self.fitness_function,
+                fold=self.fold
             )
             # e = int(time.time() - start_time)
             # print('11111111111111111111111')
@@ -244,6 +248,7 @@ KERNELS
         self.sigma: normal distribution standard deviation.
         """
         mutation_selection = np.random.randint(0, 100, size=self.population.shape) < self.mutation_proba * 100
+        last_values = self.offspring.copy()
         if mutation_selection.any():
             self.offspring[mutation_selection] += np.random.normal(
                 0, self.sigma, size=mutation_selection.sum()
@@ -253,7 +258,7 @@ KERNELS
             # self.offspring = np.clip(self.offspring, -self.clip_v, self.clip_v)
             # self.offspring[:, 0] = np.clip(self.offspring[:, 0], -2, 2)  # benchmark function
             # self.offspring[:, 1] = np.clip(self.offspring[:, 1], -1, 1)  # benchmark function
-            self.offspring_fitness[mutation_selection.sum(axis=1).astype(bool)] = -1
+            self.offspring_fitness[(np.round(self.offspring) != np.round(last_values)).sum(axis=1).astype(bool)] = -1
 
     def update_population(self):
         """
@@ -307,6 +312,18 @@ kwargs = {
         'n_jobs': 8,
         'mutation_proba': .1,
         'recombination_proba': .6
+    },
+    'F1_FOLD': {
+        'p_size': 50,
+        'p_n_kernels': 6,
+        'k_size': (3, 5, 7),
+        # 'k_size': 3,
+        'method': 'max',
+        'clip_v': 1,
+        'k': 2,
+        'n_jobs': 10,
+        'mutation_proba': .15,
+        'recombination_proba': .6
     }
 }[FITNESS_FUNCTION]
 
@@ -317,10 +334,32 @@ if __name__ == "__main__":
     from fitness import fitness_function
     dev = EvolutionaryKernelOptimization(**kwargs)
     dev.init_population()
-    dev.optimize(iterations=150, plot='lineal', save_results=True)
-# dev.optimize(iterations=1500, plot='log', save_results=True)
-# dev.optimize(iterations=5000, plot='log', save_results=False)
+    dev.optimize(iterations=100, plot='lineal', save_results=True)
 
+
+    # np.random.seed(1)
+    # folds = []
+    # img_list = np.arange(20)
+    # for _ in range(1):
+    #     np.random.shuffle(img_list)
+    #     folds.append(img_list.copy())
+
+    # for r_i in range(4, 20, 4):
+    #     folds.append(np.roll(folds[0], r_i))
+    # a = 0
+    # # a = [ 3 16  6 10  2 14  4 17  7  1 13  0 19 18  9 15  8 12 11  5]
+    # with open(r"/tmp/folds.pkl", "wb") as output_file:
+    #     pickle.dump(folds, output_file)
+    # with open(r"/tmp/index.pkl", "wb") as output_file:
+    #     pickle.dump(0, output_file)
+    # for i_fold in range(2, 3):
+    # # for i_fold in range(5):
+    #     with open(r"/tmp/index.pkl", "wb") as output_file:
+    #         pickle.dump(i_fold, output_file)
+    #     print(folds[i_fold])
+    #     dev = EvolutionaryKernelOptimization(**kwargs)
+    #     dev.init_population()
+    #     dev.optimize(iterations=75, plot='lineal', save_results=True)
 
 #
 # import numpy as np

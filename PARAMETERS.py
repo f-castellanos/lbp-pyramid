@@ -12,8 +12,8 @@ Defines the LBP algorithm version to be used.
 · var: rotation invariant variance measures of the contrast of local image texture which is rotation but not gray scale invariant.
 
 """  # noqa
-# LBP_METHOD = 'var'
-LBP_METHOD = 'riu'
+LBP_METHOD = 'var'
+# LBP_METHOD = 'riu'
 # LBP_METHOD = 'default'
 
 """
@@ -52,8 +52,6 @@ N_SCALES
 Number of scales to use.
 1 - 6
 """
-# N_SCALES = 1
-N_SCALES = 5
 
 """
 GRAY_INTENSITY    <- ONLY for get_pyramid_dataset
@@ -72,25 +70,37 @@ Whether to add a scale with x2 resolution.
 · True
 · False
 """
-X2SCALE = True
-# X2SCALE = False
 
 """
 """
 ENCODING = 'categorical'
-
+# FOLDS = False
+FOLDS = 5
 CONVOLUTION = None
-PREPROCESS_OPTIMIZATION = True
-# PREPROCESS_TYPE = 'default'
-PREPROCESS_TYPE = 'lbp_g_cv'
 # CONVOLUTION = np.round(np.random.uniform(low=-1, high=1, size=(9,)).reshape(3, 3), 3)
 CONV_PATH = None if CONVOLUTION is None else ';'.join(CONVOLUTION.ravel().astype(str))
 CONV_PREPROCESSING = False
+
 RADIUS = 1
-
-
+MULTI_RADIUS = False
 CHANNEL = 1
+# DATASET = 'DRIVE'
+DATASET = 'STARE'
+# DATASET = 'CHASE'
+PREPROCESS_TYPE = 'lbp_g' if FOLDS is False else 'lbp_g_fold'
+PREPROCESS_OPTIMIZATION = True
+N_SCALES = 5
+X2SCALE = True
+
+# RADIUS = 6
+# MULTI_RADIUS = True
 # CHANNEL = None
+# DATASET = 'DRIVE'
+# PREPROCESS_TYPE = 'default'
+# PREPROCESS_OPTIMIZATION = False
+# N_SCALES = 1
+# X2SCALE = False
+
 
 # Other parameters
 MODEL_NAME = ''
@@ -105,8 +115,6 @@ FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
 # FILE_EXTENSION = f"{LBP_METHOD}_{METHOD}_{INTERPOLATION_ALGORITHM}" \
 #                  f"_balance-{BALANCE}_scales-{N_SCALES}_x2-{X2SCALE}" \
 #                  f"_gray-intensity-{GRAY_INTENSITY}"
-
-DATASET = 'STARE'
 
 
 def update_file_extension(parameters):

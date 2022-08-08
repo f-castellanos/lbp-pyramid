@@ -64,7 +64,8 @@ def plot_lbp(img, img_lbp):
 
 def lbp(img, r=1, method='default', plot=False):
     # p is the number of pixels in a square of radio r
-    p = min(8 * r, 32)
+    p = 8 * r
+    # p = min(8 * r, 32)
     n_points = p * r
     img_lbp = local_binary_pattern(img, p, r, method=LBP_METHODS_MAP[method])
     if method == 'riu':

@@ -2,13 +2,18 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9887de86-02a0-47c2-a558-55f59d73fe08" name="Changes" comment="process optimization">
+      <change afterPath="$PROJECT_DIR$/drive_test_label.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pixel_counter" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/6-EA-selection.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/6-EA-selection.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/4.5.1.2-default.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/4.5.2.1-gray-intensity.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/4.5.2.1-gray-intensity.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/PARAMETERS.py" beforeDir="false" afterPath="$PROJECT_DIR$/PARAMETERS.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/convolution/fitness.py" beforeDir="false" afterPath="$PROJECT_DIR$/convolution/fitness.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/convolution/kernel_optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/convolution/kernel_optimization.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/create_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_db.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lbm_fit.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/lbm_fit.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/preprocess/lbp_scikit.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/lbp_scikit.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/preprocess/preprocess.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/preprocess/preprocess_optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/preprocess/preprocess_optimization.py" afterDir="false" />
     </list>
@@ -45,7 +50,7 @@
       <recent name="$PROJECT_DIR$/convolution" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.create_db">
+  <component name="RunManager" selected="Python.preprocess_optimization">
     <configuration name="create_db" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="lbp-pyramid" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -59,6 +64,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/create_db.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="drive_test_label" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="lbp-pyramid" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/drive_test_label.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -130,34 +156,13 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="tests" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="lbp-pyramid" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.create_db" />
         <item itemvalue="Python.preprocess_optimization" />
-        <item itemvalue="Python.pruebas" />
+        <item itemvalue="Python.create_db" />
         <item itemvalue="Python.kernel_optimization" />
-        <item itemvalue="Python.tests" />
+        <item itemvalue="Python.drive_test_label" />
+        <item itemvalue="Python.pruebas" />
       </list>
     </recent_temporary>
   </component>
@@ -219,7 +224,14 @@
       <option name="project" value="LOCAL" />
       <updated>1656408956704</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="process optimization">
+      <created>1657083412435</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1657083412436</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -243,24 +255,14 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/create_db.py</url>
-          <line>104</line>
-          <option name="timeStamp" value="59" />
+          <url>file://$PROJECT_DIR$/drive_test_label.py</url>
+          <line>38</line>
+          <option name="timeStamp" value="1" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/preprocess/preprocess.py</url>
-          <line>149</line>
-          <option name="timeStamp" value="75" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/preprocess/preprocess.py</url>
-          <line>152</line>
-          <option name="timeStamp" value="76" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/preprocess/preprocess.py</url>
-          <line>153</line>
-          <option name="timeStamp" value="77" />
+          <url>file://$PROJECT_DIR$/drive_test_label.py</url>
+          <line>29</line>
+          <option name="timeStamp" value="4" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
