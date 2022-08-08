@@ -131,3 +131,5 @@ dmypy.json
 **/jupyter-media/**
 
 **/convolution/outputs/**
+
+**/preprocess/outputs/**
