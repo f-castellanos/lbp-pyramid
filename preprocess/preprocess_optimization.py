@@ -1,5 +1,5 @@
-import numpy as np
-import pickle
+# import numpy as np
+# import pickle
 import PARAMETERS
 # np.random.seed(1)
 # folds = []
@@ -10,12 +10,13 @@ import PARAMETERS
 #
 # for r_i in range(4, 20, 4):
 #     folds.append(np.roll(folds[0], r_i))
-with open(r"/tmp/folds.pkl", "wb") as output_file:
-    pickle.dump([np.arange(28)], output_file)
-with open(r"/tmp/index.pkl", "wb") as output_file:
-    pickle.dump(0, output_file)
+# with open(r"/tmp/folds.pkl", "wb") as output_file:
+#     pickle.dump([np.arange(28)], output_file)
+# with open(r"/tmp/index.pkl", "wb") as output_file:
+#     pickle.dump(0, output_file)
 
 from convolution.kernel_optimization import EvolutionaryKernelOptimization
+from convolution.fitness import Fitness
 
 
 kwargs = {
@@ -27,8 +28,8 @@ kwargs = {
     'k': 2,
     'mutation_proba': 0.15,
     'recombination_proba': .6,
-    'n_jobs': 1,
-    # 'n_jobs': 10,
+    # 'n_jobs': 1,
+    'n_jobs': 2,
     'apply_abs': True
 }
 
@@ -56,10 +57,11 @@ kwargs = {
 #     dev.optimize(iterations=100, plot='lineal', save_results=True)
 
 for i_fold in range(PARAMETERS.FOLDS):
-    PARAMETERS.CURRENT_FOLD = i_fold
-    dev = EvolutionaryKernelOptimization(**kwargs)
-    dev.fitness_function = 'PREPROCESS_LBP_G_FOLD'
+# for i_fold in range(10, 15):
+    fitness = Fitness(fold=i_fold, fitness_method='f1_preprocess_lbp_g')
+    dev = EvolutionaryKernelOptimization(fitness, fold=i_fold, **kwargs)
     dev.init_population()
     dev.optimize(iterations=100, plot='lineal', save_results=True)
+    # dev.optimize(iterations=100, plot='lineal', save_results=True)
 
 

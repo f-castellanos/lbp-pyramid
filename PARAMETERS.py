@@ -75,7 +75,7 @@ Whether to add a scale with x2 resolution.
 """
 ENCODING = 'categorical'
 # FOLDS = False
-FOLDS = 5
+FOLDS = 20
 CONVOLUTION = None
 # CONVOLUTION = np.round(np.random.uniform(low=-1, high=1, size=(9,)).reshape(3, 3), 3)
 CONV_PATH = None if CONVOLUTION is None else ';'.join(CONVOLUTION.ravel().astype(str))

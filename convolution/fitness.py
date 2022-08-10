@@ -52,24 +52,6 @@ from main import LGBMNumerical, lgb_f1_score
 #     y_hat = np.round(y_hat)  # scikits f1 doesn't like probabilities
 #     return 'f1', f1_score_w(y_true, y_hat, W_TEST), True
 
-
-# def f1(individual, n_kernels, k_size, *_, **__):
-#     features = [pd.DataFrame()]*TRAIN_SIZE
-#     count = 0
-#     for j, ks in enumerate(k_size):
-#         k_len = int(ks**2)
-#         features = [
-#             pd.concat([feat_df, pd.DataFrame(np.array(
-#                 [cv2.filter2D(img, -1, individual[(count + i*k_len):(count + (i + 1) * k_len)].reshape((ks, ks)))[mask]
-#                  for i in range(n_kernels // len(k_size))]
-#             ).T, columns=np.arange(j * (n_kernels // len(k_size)), (j + 1) * (n_kernels // len(k_size))))], axis=1)
-#             for img, mask, feat_df in zip(IMAGES, MASKS, features)
-#         ]
-#         count += k_len * (n_kernels // len(k_size))
-#     CLF.fit(pd.concat(features[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :], Y_TRAIN, eval_metric=lgb_f1_score)
-#     # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
-#     y_pred = CLF.predict(pd.concat(features[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :])
-#     return f1_score(Y_TEST, y_pred)
 #
 #
 # Y_IMG = []
@@ -359,7 +341,9 @@ from main import LGBMNumerical, lgb_f1_score
 
 
 class Fitness:
-    def __int__(self, fold=None):
+    def __init__(self, fold=None, fitness_method=None):
+        self.fitness_method = fitness_method
+
         self.p_obj = Preprocess(
             lbp_radius=1,
             lbp_method=PARAMETERS.LBP_METHOD,
@@ -385,11 +369,14 @@ class Fitness:
         self.masks_path = rf'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/{PARAMETERS.DATASET}/training/mask'
         self.labels_path = rf'/home/fer/Drive/Estudios/Master-IA/TFM/dataset/{PARAMETERS.DATASET}/training/1st_manual'
 
+        sample_size = 0.2
+
         self.dataset_size = {'DRIVE': 20, 'DRIVE_TEST': 20, 'CHASE': 28, 'STARE': 20}[PARAMETERS.DATASET]
         self.train_size = 20 if PARAMETERS.DATASET == 'CHASE' else 14
         self.fold = fold
         if fold is not None:
             self.train_size = self.dataset_size - self.p_obj.fold_size
+        self.val_train_size = round(self.train_size*.7)
 
         self.images = self.load_images()
         self.masks = self.load_masks()
@@ -407,25 +394,25 @@ class Fitness:
             axis=0
         ).T).values.ravel()
         self.train_index = train_test_split(
-            np.arange(self.y_train.shape[0]), test_size=0.2, random_state=42, stratify=self.y_train)[0]
-        self.test_index = train_test_split(
-            np.arange(self.y_test.shape[0]), test_size=0.2, random_state=42, stratify=self.y_test)[0]
+            np.arange(self.y_train.shape[0]), test_size=sample_size, random_state=42, stratify=self.y_train)[1]
+        # self.test_index = train_test_split(
+        #     np.arange(self.y_test.shape[0]), test_size=sample_size, random_state=42, stratify=self.y_test)[1]
         self.sampled_y_train = self.y_train[self.train_index]
-        self.sampled_y_test = self.y_test[self.test_index]
+        # self.sampled_y_test = self.y_test[self.test_index]
 
     def load_images(self):
         path_list = sorted(listdir(self.path))
-        paths = [path_list[i_position] for i_position in self.p_obj.img_order][:self.train_size]
+        paths = [f"{self.path}/{path_list[i_position]}" for i_position in self.p_obj.img_order][:self.train_size]
         return [np.asarray(Image.open(path).convert('RGB'))[:, :, 1] for path in paths]
 
     def load_masks(self):
         path_list = sorted(listdir(self.masks_path))
-        paths = [path_list[i_position] for i_position in self.p_obj.img_order][:self.train_size]
+        paths = [f"{self.masks_path}/{path_list[i_position]}" for i_position in self.p_obj.img_order][:self.train_size]
         return [np.asarray(Image.open(path).convert('L')) > 100 for path in paths]
 
     def load_labels(self):
         path_list = sorted(listdir(self.labels_path))
-        paths = [path_list[i_position] for i_position in self.p_obj.img_order][:self.train_size]
+        paths = [f"{self.labels_path}/{path_list[i_position]}" for i_position in self.p_obj.img_order][:self.train_size]
         return [np.asarray(Image.open(path).convert('L')) > 30 for path in paths]
 
     def f1_preprocess_lbp_g(self, individual, *_, **__):
@@ -457,34 +444,77 @@ class Fitness:
                    for img, mask in zip(preprocessed_images, self.masks)]
 
         df_train = pd.concat([
-            pd.concat(green_p[:round(self.train_index*0.7)], ignore_index=True).iloc[self.train_index, :],
-            pd.concat(riu_images[:round(self.train_index*0.7)], ignore_index=True).iloc[self.train_index, :],
-            pd.concat(var_images[:round(self.train_index*0.7)], ignore_index=True).iloc[self.train_index, :],
+            pd.concat(green_p[:self.val_train_size], ignore_index=True).iloc[self.train_index, :],
+            pd.concat(riu_images[:self.val_train_size], ignore_index=True).iloc[self.train_index, :],
+            pd.concat(var_images[:self.val_train_size], ignore_index=True).iloc[self.val_train_size, :],
         ], axis=1)
         self.clf.fit(df_train, self.sampled_y_train, eval_metric=lgb_f1_score)
         df_test = pd.concat([
-            pd.concat(green_p[round(self.train_index*0.7):], ignore_index=True).iloc[self.test_index, :],
-            pd.concat(riu_images[round(self.train_index*0.7):], ignore_index=True).iloc[self.test_index, :],
-            pd.concat(var_images[round(self.train_index*0.7):], ignore_index=True).iloc[self.test_index, :],
+            # pd.concat(green_p[self.val_train_size:], ignore_index=True).iloc[self.test_index, :],
+            # pd.concat(riu_images[self.val_train_size:], ignore_index=True).iloc[self.test_index, :],
+            # pd.concat(var_images[self.val_train_size:], ignore_index=True).iloc[self.test_index, :],
+            pd.concat(green_p[self.val_train_size:], ignore_index=True),
+            pd.concat(riu_images[self.val_train_size:], ignore_index=True),
+            pd.concat(var_images[self.val_train_size:], ignore_index=True),
         ], axis=1)
         y_predicted = self.clf.predict(df_test)
-        return f1_score(self.sampled_y_test, y_predicted)
+        return f1_score(self.y_test, y_predicted)
+        # return f1_score(self.sampled_y_test, y_predicted)
+
+    def f1_convolution(self, individual, n_kernels, k_size, *_, **__):
+        xn_kernels = n_kernels // len(k_size)
+        gene_count = 0
+        conv_features = []
+        for j, ks in enumerate(k_size):
+            k_len = int(ks ** 2)
+            kernel_features_set = []
+            for img, mask in zip(self.images[:self.val_train_size], self.masks[:self.val_train_size]):
+                img_features = []
+                for xi in range(xn_kernels):
+                    kernel = individual[(gene_count + xi * k_len):(gene_count + (xi + 1) * k_len)].reshape((ks, ks))
+                    conv_img = cv2.filter2D(img, -1, kernel)
+                    img_features.append(pd.DataFrame(np.array(conv_img[mask]), columns=[j * xn_kernels + xi]))
+                kernel_features_set.append(pd.concat(img_features, axis=1))
+            conv_features.append(pd.concat(kernel_features_set, ignore_index=True))
+            gene_count += k_len * (n_kernels // len(k_size))
+        conv_features = pd.concat(conv_features, axis=1)
+
+        gene_count = 0
+        conv_features_test = []
+        for j, ks in enumerate(k_size):
+            k_len = int(ks ** 2)
+            kernel_features_set = []
+            for img, mask in zip(self.images[self.val_train_size:], self.masks[self.val_train_size:]):
+                img_features = []
+                for xi in range(xn_kernels):
+                    kernel = individual[(gene_count + xi * k_len):(gene_count + (xi + 1) * k_len)].reshape((ks, ks))
+                    conv_img = cv2.filter2D(img, -1, kernel)
+                    img_features.append(pd.DataFrame(np.array(conv_img[mask]), columns=[j * xn_kernels + xi]))
+                kernel_features_set.append(pd.concat(img_features, axis=1))
+            conv_features_test.append(pd.concat(kernel_features_set, ignore_index=True))
+            gene_count += k_len * (n_kernels // len(k_size))
+        conv_features_test = pd.concat(conv_features_test, axis=1)
+
+        self.clf.fit(conv_features.iloc[self.train_index, :], self.sampled_y_train, eval_metric=lgb_f1_score)
+        y_predicted = self.clf.predict(conv_features_test)
+        return f1_score(self.y_test, y_predicted)
 
     def fitness_function(self, *args, **kwargs):
-        return {
-            'SPHERE': self.sphere,
-            'RASTRIGIN': self.rastrigin,
-            # 'F1': f1,
-            # 'F1_FOLD': f1_fold,
-            # 'PREPROCESS': f1_preprocess,
-            # 'PREPROCESS_GB': f1_preprocess_gb,
-            # 'PREPROCESS_W': f1_preprocess_w,
-            # 'PREPROCESS_LBP': f1_preprocess_lbp,
-            # 'PREPROCESS_LBP_GB': f1_preprocess_lbp_gb,
-            'PREPROCESS_LBP_G': self.f1_preprocess_lbp_g,
-            # 'PREPROCESS_LBP_G_FOLD': f1_preprocess_lbp_g_fold,
-            # 'PREPROCESS_LBP_G_CV': f1_preprocess_lbp_g_cv,
-        }[kwargs['function_name']](*args, **kwargs)
+        return getattr(self, self.fitness_method)(*args, **kwargs)
+        # return {
+        #     'SPHERE': self.sphere,
+        #     'RASTRIGIN': self.rastrigin,
+        #     # 'F1': f1,
+        #     # 'F1_FOLD': f1_fold,
+        #     # 'PREPROCESS': f1_preprocess,
+        #     # 'PREPROCESS_GB': f1_preprocess_gb,
+        #     # 'PREPROCESS_W': f1_preprocess_w,
+        #     # 'PREPROCESS_LBP': f1_preprocess_lbp,
+        #     # 'PREPROCESS_LBP_GB': f1_preprocess_lbp_gb,
+        #     'PREPROCESS_LBP_G': self.f1_preprocess_lbp_g,
+        #     # 'PREPROCESS_LBP_G_FOLD': f1_preprocess_lbp_g_fold,
+        #     # 'PREPROCESS_LBP_G_CV': f1_preprocess_lbp_g_cv,
+        # }[kwargs['function_name']](*args, **kwargs)
 
     @staticmethod
     def sphere(x, *_, **__):
@@ -609,4 +639,22 @@ class Fitness:
 #         pd.concat(var_images[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :],
 #     ], axis=1)
 #     y_pred = CLF.predict(df_test)
+#     return f1_score(Y_TEST, y_pred)
+
+# def f1(individual, n_kernels, k_size, *_, **__):
+#     features = [pd.DataFrame()]*TRAIN_SIZE
+#     count = 0
+#     for j, ks in enumerate(k_size):
+#         k_len = int(ks**2)
+#         features = [
+#             pd.concat([feat_df, pd.DataFrame(np.array(
+#                 [cv2.filter2D(img, -1, individual[(count + i*k_len):(count + (i + 1) * k_len)].reshape((ks, ks)))[mask]
+#                  for i in range(n_kernels // len(k_size))]
+#             ).T, columns=np.arange(j * (n_kernels // len(k_size)), (j + 1) * (n_kernels // len(k_size))))], axis=1)
+#             for img, mask, feat_df in zip(IMAGES, MASKS, features)
+#         ]
+#         count += k_len * (n_kernels // len(k_size))
+#     CLF.fit(pd.concat(features[:round(TRAIN_SIZE*0.7)], ignore_index=True).iloc[TRAIN_INDEX, :], Y_TRAIN, eval_metric=lgb_f1_score)
+#     # CLF.fit(pd.concat(features[:10], ignore_index=True), Y_TRAIN)
+#     y_pred = CLF.predict(pd.concat(features[round(TRAIN_SIZE*0.7):], ignore_index=True).iloc[TEST_INDEX, :])
 #     return f1_score(Y_TEST, y_pred)

@@ -1,8 +1,8 @@
 import numpy as np
-try:
-    from fitness import fitness_function
-except ImportError:
-    pass
+# try:
+#     from fitness import fitness_function
+# except ImportError:
+#     pass
 import matplotlib.pyplot as plt
 from pathlib import Path
 import time
@@ -10,6 +10,8 @@ from joblib import Parallel, delayed
 import math
 import pickle
 from tqdm import tqdm
+
+import PARAMETERS
 
 np.random.seed(1)
 FITNESS_FUNCTION = 'F1'
@@ -28,8 +30,11 @@ def elitism_comparison(v1, v2, method):
 
 
 class EvolutionaryKernelOptimization:
-    def __init__(self, elitism=True, p_size=70, p_n_kernels=2, k_size=3, apply_abs=False, fold=None,
+    def __init__(self, fitness_obj, elitism=True, p_size=70, p_n_kernels=2, k_size=3, apply_abs=False, fold=None,
                  method='max', clip_v=1, k=3, mutation_proba=.05, recombination_proba=.2, n_jobs=6):
+
+        self.fitness_obj = fitness_obj
+
         self.p_size = p_size
         self.p_n_kernels = p_n_kernels
         if isinstance(k_size, int):
@@ -37,7 +42,7 @@ class EvolutionaryKernelOptimization:
         self.k_size = np.array(k_size)
         self.elitism = elitism
         self.clip_v = clip_v
-        self.fitness_function = FITNESS_FUNCTION
+        # self.fitness_function = FITNESS_FUNCTION
         self.apply_abs = apply_abs
 
         self.k = k
@@ -113,7 +118,8 @@ class EvolutionaryKernelOptimization:
             self.graph_average_fitness.append(np.mean(self.fitness))
             self.graph_std.append(np.std(self.fitness))
         if save_results:
-            path = f"outputs/{time.time()}".replace('.', '')
+            aux = '' if self.fold is None else f"_{self.fold}_of_{PARAMETERS.FOLDS}"
+            path = f"outputs/{time.time()}{aux}".replace('.', '')
             Path(path).mkdir(parents=True, exist_ok=True)
             text = f"""
 PARAMETERS
@@ -173,12 +179,12 @@ KERNELS
         if (fitness == -1).any():
             # start_time = time.time()
             fitness[fitness == -1] = np.apply_along_axis(
-                fitness_function,
+                self.fitness_obj.fitness_function,
                 1,
                 population[fitness == -1, :],
                 n_kernels=self.p_n_kernels,
                 k_size=self.k_size,
-                function_name=self.fitness_function,
+                # function_name=self.fitness_function,
                 fold=self.fold
             )
             # e = int(time.time() - start_time)
@@ -294,13 +300,6 @@ kwargs = {
         'method': 'min',
         'clip_v': 5.12
     },
-    # 'F1': {
-    #     'p_size': 50,
-    #     'p_n_kernels': 6,
-    #     'k_size': (3, 5, 7),
-    #     'method': 'max',
-    #     'clip_v': 1
-    # },
     'F1': {
         'p_size': 100,
         'p_n_kernels': 6,
@@ -309,32 +308,43 @@ kwargs = {
         'method': 'max',
         'clip_v': 1,
         'k': 2,
-        'n_jobs': 8,
+        # 'n_jobs': 2,
+        'n_jobs': 1,
         'mutation_proba': .1,
         'recombination_proba': .6
     },
-    'F1_FOLD': {
-        'p_size': 50,
-        'p_n_kernels': 6,
-        'k_size': (3, 5, 7),
-        # 'k_size': 3,
-        'method': 'max',
-        'clip_v': 1,
-        'k': 2,
-        'n_jobs': 10,
-        'mutation_proba': .15,
-        'recombination_proba': .6
-    }
+    # 'F1_FOLD': {
+    #     'p_size': 50,
+    #     'p_n_kernels': 6,
+    #     'k_size': (3, 5, 7),
+    #     # 'k_size': 3,
+    #     'method': 'max',
+    #     'clip_v': 1,
+    #     'k': 2,
+    #     # 'n_jobs': 2,
+    #     'n_jobs': 1,
+    #     'mutation_proba': .15,
+    #     'recombination_proba': .6
+    # }
 }[FITNESS_FUNCTION]
 
 
 if __name__ == "__main__":
     import os
     os.environ['J_NOTEBOOK'] = '1'
-    from fitness import fitness_function
-    dev = EvolutionaryKernelOptimization(**kwargs)
-    dev.init_population()
-    dev.optimize(iterations=100, plot='lineal', save_results=True)
+    # from fitness import fitness_function
+    from fitness import Fitness
+    if PARAMETERS.FOLDS is None:
+        fitness = Fitness(fold=None, fitness_method='f1_convolution')
+        dev = EvolutionaryKernelOptimization(fitness, **kwargs)
+        dev.init_population()
+        dev.optimize(iterations=100, plot='lineal', save_results=True)
+    else:
+        for i_fold in range(PARAMETERS.FOLDS):
+            fitness = Fitness(fold=i_fold, fitness_method='f1_convolution')
+            dev = EvolutionaryKernelOptimization(fitness, fold=i_fold, **kwargs)
+            dev.init_population()
+            dev.optimize(iterations=2, plot='lineal', save_results=True)
 
 
     # np.random.seed(1)
